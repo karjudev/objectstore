@@ -40,7 +40,7 @@ Tutti i messaggi scambiati fra client e object store **hanno un formato basato s
 
 Tutte le comunicazioni sono iniziate dal client (*request*), e prevedono una risposta da parte dell'object store (*response*). Il response può contenere un *message* di testo libero, a discrezione dello studente, che specifica la causa di eventuali errori.
 
-In dettaglio, il protocollo prevede i seguenti messagi:
+In dettaglio, il protocollo prevede i seguenti messaggi:
 - **Registrazione**: inviato dal cliente per registrarsi sull'object store; quest'ultimo risponde con l'esito dell'operazione
   - Request: `REGISTER <name>\n`
   - Response: `OK\n` (registrazione riuscita) oppure `KO <message>\n` (registrazione fallita)
