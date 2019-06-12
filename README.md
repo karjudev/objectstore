@@ -45,7 +45,7 @@ In dettaglio, il protocollo prevede i seguenti messaggi:
   - Request: `REGISTER <name>\n`
   - Response: `OK\n` (registrazione riuscita) oppure `KO <message>\n` (registrazione fallita)
 - **Memorizzazione**: inviato dal cliente per memorizzare un oggetto nel proprio spazio privato sull'object store; quest'ultimo risponde con l'esito dell'operazione
-  - Request: `STORE <name> <len>\n<data>` (in cui *data* è un blocco binario di lunghezza *len* bytes) 
+  - Request: `STORE <name> <len>\n<data>` (in cui *data* è un blocco binario di lunghezza *len* bytes)
   - Response: `OK\n` (memorizzazione riuscita) oppure `KO <message>\n` (memorizzazione fallita)
 - **Lettura**: inviato dal cliente per recuperare i dati di un oggetto precedentemente memorizzato nel proprio spazio privato sull'object store; quest'ultimo risponde con i dati richiesti, oppure con una segnalazione di errore
   - Request: `RETRIEVE <name>\n` 
