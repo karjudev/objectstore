@@ -20,7 +20,7 @@
 #include <sys/un.h>
 
 #include <socket/socket.h>
-#include <assert.h>
+#include <assertmacros.h>
 
 #define UNIX_PATH_MAX 108
 
@@ -32,7 +32,7 @@
  * @param n Numero di bytes da leggere
  * @param size_t Numero di bytes effettivamente letti, -1 se c'è un errore
  */
-size_t readn (int file_descriptor, void* buffer, size_t n) {
+static size_t readn (int file_descriptor, void* buffer, size_t n) {
 	// Controlla la correttezza dei parametri
 	ASSERT_ERRNO_RETURN((file_descriptor > 0) && (buffer != NULL) && (n > 0), EINVAL, -1);
 	// Numero di bytes rimasti
@@ -71,7 +71,7 @@ size_t readn (int file_descriptor, void* buffer, size_t n) {
  * @param n Numero di bytes da scrivere
  * @return size_t n se l'operazione è completata con successo, -1 se c'è un errore
  */
-size_t writen (int file_descriptor, const void *buffer, size_t n) {
+static size_t writen (int file_descriptor, const void *buffer, size_t n) {
 	// Controlla la correttezza degli argomenti
 	ASSERT_ERRNO_RETURN((file_descriptor > 0) && (n > 0), EINVAL, -1);
 	// Numero di bytes rimasti da leggere
@@ -98,6 +98,46 @@ size_t writen (int file_descriptor, const void *buffer, size_t n) {
 	}
 	// Restituisce il numero di bytes scritti perché è andato tutto bene
 	return n;
+}
+
+/**
+ * @brief Invia un messaggio al server.
+ * 
+ * @param message Messaggio da inviare
+ * @param size Dimensione del messaggio
+ * @return int 0 se il messaggio è stato inviato correttamente. Se c'è un errore restituisce -1 e setta errno
+ */
+int send_message (int file_descriptor, void* message, size_t size) {
+    // Controlla che i parametri siano corretti
+    ASSERT_ERRNO_RETURN((message != NULL) && (size > 0), EINVAL, -1);
+    // Scrive il messaggio al server
+    int bytes_written = writen(file_descriptor, message, size);
+    // Controlla che il messaggio sia stato inviato correttamente
+    ASSERT_RETURN(bytes_written != -1, -1);
+    // Restituisce il flag di successo
+    return 0;
+}
+
+/**
+ * @brief Riceve dal client un messaggio di dimensione size
+ * 
+ * @param file_descriptor File descriptor da cui leggere
+ * @param size Dimensione del messaggio
+ * @return void* Puntatore al messaggio se la ricezione è avvenuta con successo. Se c'è un errore restituisce NULL e setta errno.
+ */
+void* receive_message (int file_descriptor, size_t size) {
+    // Controlla che i parametri siano corretti
+    ASSERT_ERRNO_RETURN((file_descriptor > 0) && (size > 0), EINVAL, NULL);
+    // Alloca il buffer per ricevere il messaggio
+	void* buffer = malloc(size);
+	// Controlla che l'allocazione sia avvenuta con successo
+	ASSERT_ERRNO_RETURN(buffer != NULL, ENOMEM, NULL);
+	// Riceve i dati
+	int bytes_read = readn(file_descriptor, buffer, size);
+	// Controlla che la lettura sia avvenuta con successo
+	ASSERT_RETURN(bytes_read != -1, NULL);
+	// Restituisce i dati
+	return buffer;
 }
 
 /**

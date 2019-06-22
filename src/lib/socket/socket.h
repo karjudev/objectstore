@@ -13,24 +13,23 @@
 #define _SOCKET
 
 /**
- * @brief Legge n bytes dal file descriptor, inserendoli nel buffer.
- *
- * @param file_descriptor File descriptor da cui leggere
- * @param buffer Buffer in cui scrivere i bytes letti
- * @param n Numero di bytes da leggere
- * @param size_t Numero di bytes effettivamente letti, -1 se c'è un errore
+ * @brief Invia un messaggio al server.
+ * 
+ * @param file_descriptor File descriptor su cui scrivere
+ * @param message Messaggio da inviare
+ * @param size Dimensione del messaggio
+ * @return int 0 se il messaggio è stato inviato correttamente. Se c'è un errore restituisce -1 e setta errno.
  */
-size_t readn (int file_descriptor, void* buffer, size_t n);
+int send_message (int file_descriptor, void* message, size_t size);
 
 /**
- * @brief Scrive n bytes sul file descriptor prendendoli dal buffer.
- *
- * @param file_descriptor File descriptor su cui scrivere
- * @param buffer Buffer da cui prendere i dati
- * @param n Numero di bytes da scrivere
- * @return size_t n se l'operazione è completata con successo, -1 se c'è un errore
+ * @brief Riceve dal client un messaggio di dimensione size
+ * 
+ * @param file_descriptor File descriptor da cui leggere
+ * @param size Dimensione del messaggio
+ * @return void* Puntatore al messaggio se la ricezione è avvenuta con successo. Se c'è un errore restituisce NULL e setta errno.
  */
-size_t writen (int file_descriptor, const void *buffer, size_t n);
+void* receive_message (int file_descriptor, size_t size);
 
 /**
  * @brief Crea un file descriptor collegato ad un server socket AF_UNIX.

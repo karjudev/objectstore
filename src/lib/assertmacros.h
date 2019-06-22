@@ -52,11 +52,11 @@
     ASSERT_MESSAGE(statement, message, return value)
 
 /**
- * @brief Se statement restituisce FALSE stampa message ed esegue operation
+ * @brief Se statement restituisce FALSE stampa message, setta errno = errvalue ed esegue operation
  * 
  */
-#define ASSERT_MESSAGE_ERRNO(statement, message, operation) \
-    ASSERT(statement, perror(message); operation)
+#define ASSERT_MESSAGE_ERRNO(statement, message, errvalue, operation) \
+    ASSERT(statement, perror(message); errno = errvalue; operation)
 
 /**
  * @brief Se statement restituisce FALSE, stampa message, setta errno = errval e restituisce value.
