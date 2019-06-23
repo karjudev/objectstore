@@ -65,12 +65,21 @@ int close_socket (int socket_fd);
 int close_server_socket (int socket_fd, char* filename);
 
 /**
- * @brief Accetta la connessione di un client su un server socket
- *
+ * @brief Crea un fd_set che contiene il file descriptor del server
+ * 
  * @param server_fd File descriptor del server
- * @return int File descriptor del client connesso al server. Se c'è un errore restituisce -1 e setta errno.
+ * @return fd_set Insieme di file descriptor che contiene il server
  */
-int accept_client (int server_fd);
+fd_set create_fd_set (int server_fd);
 
+/**
+ * @brief Accetta la connessione di un nuovo client tramite un selettore
+ * 
+ * @param server_fd File descriptor del server 
+ * @param set File descriptor set da cui leggere connessioni
+ * @param timeout Timeout massimo da attendere prima di uscire
+ * @return int File descriptor del nuovo client. Se il timeout è scaduto restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ */
+int accept_new_client (int server_fd, fd_set set, struct timeval timeout);
 
 #endif // _SOCKET

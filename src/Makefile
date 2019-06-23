@@ -35,7 +35,6 @@ $(LIB)/libosclient.a: $(LIB)/osclient/osclient.o
 
 # Test valgrind del server
 test-server: objectstore
-	if [ -S ./tmp.sock ]; then rm -f ./tmp.sock; fi
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./objectstore
 
 # Test valgrind del client
