@@ -14,6 +14,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include <sys/select.h>
+
 #include <socket/socket.h>
 
 #include <osclient/osclient.h>
