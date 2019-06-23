@@ -9,7 +9,7 @@ CFLAGS = -g -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $
 AR = ar
 ARFLAGS = rvs
 
-.PHONY: all test-server test
+.PHONY: all clean test test-client test-server
 
 all: objectstore client
 
@@ -40,3 +40,6 @@ test-server: objectstore
 # Test valgrind del client
 test-client: client
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client
+
+test: all
+	./objectstore
