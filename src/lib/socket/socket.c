@@ -16,11 +16,13 @@
 
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/un.h>
 
 #include <socket/socket.h>
-#include <assert.h>
+#include <assertmacros.h>
 
 #define UNIX_PATH_MAX 108
 
@@ -32,7 +34,7 @@
  * @param n Numero di bytes da leggere
  * @param size_t Numero di bytes effettivamente letti, -1 se c'è un errore
  */
-size_t readn (int file_descriptor, void* buffer, size_t n) {
+static size_t readn (int file_descriptor, void* buffer, size_t n) {
 	// Controlla la correttezza dei parametri
 	ASSERT_ERRNO_RETURN((file_descriptor > 0) && (buffer != NULL) && (n > 0), EINVAL, -1);
 	// Numero di bytes rimasti
@@ -71,7 +73,7 @@ size_t readn (int file_descriptor, void* buffer, size_t n) {
  * @param n Numero di bytes da scrivere
  * @return size_t n se l'operazione è completata con successo, -1 se c'è un errore
  */
-size_t writen (int file_descriptor, const void *buffer, size_t n) {
+static size_t writen (int file_descriptor, const void *buffer, size_t n) {
 	// Controlla la correttezza degli argomenti
 	ASSERT_ERRNO_RETURN((file_descriptor > 0) && (n > 0), EINVAL, -1);
 	// Numero di bytes rimasti da leggere
@@ -98,6 +100,46 @@ size_t writen (int file_descriptor, const void *buffer, size_t n) {
 	}
 	// Restituisce il numero di bytes scritti perché è andato tutto bene
 	return n;
+}
+
+/**
+ * @brief Invia un messaggio al server.
+ * 
+ * @param message Messaggio da inviare
+ * @param size Dimensione del messaggio
+ * @return int 0 se il messaggio è stato inviato correttamente. Se c'è un errore restituisce -1 e setta errno
+ */
+int send_message (int file_descriptor, void* message, size_t size) {
+    // Controlla che i parametri siano corretti
+    ASSERT_ERRNO_RETURN((message != NULL) && (size > 0), EINVAL, -1);
+    // Scrive il messaggio al server
+    int bytes_written = writen(file_descriptor, message, size);
+    // Controlla che il messaggio sia stato inviato correttamente
+    ASSERT_RETURN(bytes_written != -1, -1);
+    // Restituisce il flag di successo
+    return 0;
+}
+
+/**
+ * @brief Riceve dal client un messaggio di dimensione size
+ * 
+ * @param file_descriptor File descriptor da cui leggere
+ * @param size Dimensione del messaggio
+ * @return void* Puntatore al messaggio se la ricezione è avvenuta con successo. Se c'è un errore restituisce NULL e setta errno.
+ */
+void* receive_message (int file_descriptor, size_t size) {
+    // Controlla che i parametri siano corretti
+    ASSERT_ERRNO_RETURN((file_descriptor > 0) && (size > 0), EINVAL, NULL);
+    // Alloca il buffer per ricevere il messaggio
+	void* buffer = malloc(size);
+	// Controlla che l'allocazione sia avvenuta con successo
+	ASSERT_ERRNO_RETURN(buffer != NULL, ENOMEM, NULL);
+	// Riceve i dati
+	int bytes_read = readn(file_descriptor, buffer, size);
+	// Controlla che la lettura sia avvenuta con successo
+	ASSERT_RETURN(bytes_read != -1, NULL);
+	// Restituisce i dati
+	return buffer;
 }
 
 /**
@@ -187,15 +229,40 @@ int close_server_socket (int socket_fd, char* filename) {
 }
 
 /**
- * @brief Accetta la connessione di un client su un server socket
- *
+ * @brief Crea un fd_set che contiene il file descriptor del server
+ * 
  * @param server_fd File descriptor del server
- * @return int File descriptor del client connesso al server, -1 se c'è stato un errore
+ * @return fd_set Insieme di file descriptor che contiene il server
  */
-int accept_client (int server_fd) {
-	// Accetta l'arrivo di un nuovo client
-	int client_fd = accept(server_fd, NULL, 0);
-	ASSERT_RETURN(client_fd != -1, -1);
-	// Restituisce il numero di file descriptor del client
-	return client_fd;
+fd_set create_fd_set (int server_fd) {
+	fd_set set;
+	FD_ZERO(&set);
+	FD_SET(server_fd, &set);
+	return set;
+}
+
+/**
+ * @brief Accetta la connessione di un nuovo client tramite un selettore
+ * 
+ * @param server_fd File descriptor del server
+ * @param set File descriptor set da cui leggere connessioni
+ * @param timeout Timeout massimo da attendere prima di uscire
+ * @return int File descriptor del nuovo client. Se il timeout è scaduto restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ */
+int accept_new_client (int server_fd, fd_set set, struct timeval timeout) {
+	// Set di appoggio per evitare che l'altro sia modificato
+	fd_set ready_set = set;
+	// Richiede nuovi file descriptor pronti
+	int success = select(server_fd + 1, &ready_set, NULL, NULL, &timeout);
+	// Se non ci sono client esce
+	ASSERT_RETURN(success != -1, success);
+	// Scorre tutti i client
+	for (int i = 0; i <= server_fd; i++)
+		// Se ha trovato un file descriptor su cui scrivere lo controlla
+		if (FD_ISSET(i, &ready_set))
+			// Se è quello del server c'è un nuovo client da accettare
+			if (i == server_fd)
+				return accept(server_fd, NULL, 0);
+	// Se è arrivato in fondo senza trovare nulla (impossibile) esce
+	return 0;
 }
