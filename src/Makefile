@@ -39,7 +39,7 @@ test-server: objectstore
 
 # Test valgrind del client
 test-client: client
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client ugo 1
 
 test: all
 	./objectstore
