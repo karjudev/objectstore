@@ -24,8 +24,8 @@
 
 #include <shared.h>
 
-// File descriptor del client, dichiarato fuori dalla libreria
-static int server_fd;
+// File descriptor del client, variabile globlae della libreria
+static int server_fd = -1;
 
 static int check_response (char* response) {
     if (EQUALS(response, "OK \n", 4)) return 1;
@@ -82,7 +82,8 @@ int os_connect (char* name) {
  */
 int os_store (char* name, void* block, size_t len) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((name != NULL) && (block != NULL) && (len > 0) && (server_fd > 0), EINVAL, 0);
+    ASSERT_ERRNO_RETURN((name != NULL) && (block != NULL) && (len > 0), EINVAL, 0);
+    ASSERT_ERRNO_RETURN(server_fd > 0, ENOTCONN, -1);
     // Invia l'header
     int success = send_header("STORE %s %ld \n", name, len);
     // Verifica che l'invio sia andato a buon fine
