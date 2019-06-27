@@ -21,6 +21,10 @@ objectstore: objectstore.c $(LIB)/libsocket.a
 client: client.c $(LIB)/libsocket.a $(LIB)/libosclient.a
 	$(CC) $(CFLAGS) $< -o $@ -losclient -lsocket
 
+# Libreria per la gestione di una tabella hash
+$(LIB)/libhashtable.a: $(LIB)/hashtable/hashtable.o $(LIB)/hashtable/pair_list.o
+	$(AR) $(ARFLAGS) $@ $^
+
 # Libreria per la gestione dei socket
 $(LIB)/libsocket.a: $(LIB)/socket/socket.o
 	$(AR) $(ARFLAGS) $@ $<

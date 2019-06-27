@@ -139,14 +139,14 @@ int parse_request (int client_fd, char* header) {
     // Risultato della computazione
     int success;
     // Prima tenta di riconoscere i verbi che non necessitano di ulteriori letture o scritture
-    if (EQUALS(verb, "REGISTER", 9))
+    if (EQUALS(verb, "REGISTER"))
         success = handle_registration(client_fd, name);
-    else if (EQUALS(verb, "DELETE", 7))
+    else if (EQUALS(verb, "DELETE"))
         success = handle_deletion(client_fd, name);
     // Dopodiché passa il controllo ai metodi che richiedono di leggere o scrivere ancora dal client
-    else if (EQUALS(verb, "STORE", 6))
+    else if (EQUALS(verb, "STORE"))
         success = handle_storing(client_fd, name, length);
-    else if (EQUALS(verb, "RETRIEVE", 9))
+    else if (EQUALS(verb, "RETRIEVE"))
         success = handle_retrieving(client_fd, name);
     // Se non ha trovato un verbo riconosciuto invia un errore
     else success = -1;

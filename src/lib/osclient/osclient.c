@@ -28,7 +28,7 @@
 static int server_fd = -1;
 
 static int check_response (char* response) {
-    if (EQUALS(response, "OK \n", 4)) return 1;
+    if (EQUALS(response, "OK \n")) return 1;
     int errcode = 0;
     sscanf(response, "KO %d \n", &errcode);
     errno = errcode;
