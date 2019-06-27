@@ -3,7 +3,6 @@
  * @author Giacomo Mariani, Matricola 545519, Corso B
  * @brief Strutture dati e metodi di aiuto alla comunicazione tra socket.
  * @version 0.1
- * @date 2019-06-11
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 

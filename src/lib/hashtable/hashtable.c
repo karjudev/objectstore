@@ -145,3 +145,26 @@ int remove_hashtable (hashtable_t* table, char* key) {
     // Restituisce il valore associato alla chiave nella lista
     return value;
 }
+
+/**
+ * @brief Prende il valore associato alla chiave nella tabella.
+ * 
+ * @param table Tabella da cui recuperare l'elemento
+ * @param key Chiave che identifica l'elemento
+ * @return int Valore associato alla chiave nella tabella. Se l'elemento non esiste restituisce 0. Se c'è un errore restituisce -1.
+ */
+int retrieve_hashtable (hashtable_t* table, char* key) {
+    // Controlla la correttezza dei parametri
+    ASSERT_ERRNO_RETURN((table != NULL) && (key != NULL), EINVAL, -1);
+    // Calcola l'hash della chiave
+    int hash = hash_function(key);
+    // Recupera la lock associata alla lista
+    pthread_mutex_t* mutex = &(mutexes[hash / MUTEX_NUMBER]);
+    LOCK_ACQUIRE(mutex, return -1);
+    // Recupera l'elemento
+    int value = get_value_list(table->entries[hash], key);
+    // Rilascia la lock
+    LOCK_RELEASE(mutex, return -1);
+    // Restituisce l'elemento, se esiste
+    return value;
+}

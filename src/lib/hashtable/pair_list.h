@@ -47,7 +47,7 @@ int destroy_list (pair_list_t* list);
  * 
  * @param list Lista in cui cercare l'elemento
  * @param key Chiave dell'elemento
- * @return int Valore associato all'elemento. Se non esiste restituisce -1.
+ * @return int Valore associato all'elemento. Se non esiste un elemento con quella chiave restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
 int get_value_list (pair_list_t* list, char* key);
 

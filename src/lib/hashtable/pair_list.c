@@ -108,7 +108,7 @@ int destroy_list (pair_list_t* list) {
  * 
  * @param list Lista in cui cercare l'elemento
  * @param key Chiave dell'elemento
- * @return int Valore associato all'elemento. Se non esiste restituisce -1. Se c'è un errore restituisce -1 e setta errno.
+ * @return int Valore associato all'elemento. Se non esiste un elemento con quella chiave restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
 int get_value_list (pair_list_t* list, char* key) {
     // Controlla che i parametri siano corretti
@@ -118,7 +118,7 @@ int get_value_list (pair_list_t* list, char* key) {
     // Cerca il nodo nella lista
     struct node* found = get_node(list->head, key);
     // Se il nodo non è stato trovato non esiste
-    ASSERT_RETURN(found != NULL, -1);
+    ASSERT_RETURN(found != NULL, 0);
     // Restituisce il valore nella coppia
     return found->value;
 }
