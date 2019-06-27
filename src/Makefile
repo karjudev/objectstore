@@ -21,6 +21,10 @@ objectstore: objectstore.c $(LIB)/libsocket.a
 client: client.c $(LIB)/libsocket.a $(LIB)/libosclient.a
 	$(CC) $(CFLAGS) $< -o $@ -losclient -lsocket
 
+# Libreria per la gestione di una tabella hash
+$(LIB)/libhashtable.a: $(LIB)/hashtable/hashtable.o $(LIB)/hashtable/pair_list.o
+	$(AR) $(ARFLAGS) $@ $^
+
 # Libreria per la gestione dei socket
 $(LIB)/libsocket.a: $(LIB)/socket/socket.o
 	$(AR) $(ARFLAGS) $@ $<
@@ -40,6 +44,9 @@ test-server: objectstore
 # Test valgrind del client
 test-client: client
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client ugo 1
+
+test-hash: testhash
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./testhash
 
 test: all
 	./objectstore

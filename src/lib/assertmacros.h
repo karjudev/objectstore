@@ -1,9 +1,8 @@
 /**
- * @file assert.h
+ * @file assertmacros.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
  * @brief Macro che servono a verificare asserzioni e in caso contrario eseguire operazioni.
  * @version 0.1
- * @date 2019-06-11
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 
