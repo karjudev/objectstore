@@ -57,4 +57,13 @@ int insert_hashtable (hashtable_t* table, char* key, int value);
  */
 int remove_hashtable (hashtable_t* table, char* key);
 
+/**
+ * @brief Prende il valore associato alla chiave nella tabella.
+ * 
+ * @param table Tabella da cui recuperare l'elemento
+ * @param key Chiave che identifica l'elemento
+ * @return int Valore associato alla chiave nella tabella. Se l'elemento non esiste restituisce 0. Se c'è un errore restituisce -1.
+ */
+int retrieve_hashtable (hashtable_t* table, char* key);
+
 #endif // _HASHTABLE
