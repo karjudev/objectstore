@@ -45,8 +45,5 @@ test-server: objectstore
 test-client: client
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client ugo 1
 
-test-hash: testhash
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./testhash
-
 test: all
 	./objectstore
