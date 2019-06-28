@@ -26,12 +26,13 @@
  * @param value Valore associato alla chiave
  * @return struct node* Nodo appena creato. Se c'è un errore restituisce NULL e setta errno.
  */
-static struct node* create_node (char* key, int value) {
+static struct node* create_node (int key, char* value) {
     // Alloca la struttura dati
     struct node* new = (struct node*) malloc(sizeof(struct node));
     ASSERT_ERRNO_RETURN(new != NULL, ENOMEM, NULL);
     // Setta i dati del nodo
-    new->key = strdup(key); new->value = value;
+    new->key = key;
+    new->value = strdup(value);
     // Setta i puntatori a NULL
     new->prev = new->next = NULL;
     // Restituisce il nodo
@@ -48,8 +49,8 @@ static void destroy_nodes (struct node* head) {
     if (!head) return;
     // Distrugge tutti i nodi successivi
     destroy_nodes(head->next);
-    // Distrugge la chiave del nodo corrente
-    free(head->key);
+    // Distrugge il valore del nodo corrente
+    free(head->value);
     // Distrugge il nodo corrente
     free(head);
 }
@@ -61,11 +62,11 @@ static void destroy_nodes (struct node* head) {
  * @param key Chiave che identifica il nodo
  * @return struct node* Nodo identificato da key. Se il nodo non esiste restituisce NULL.
  */
-static struct node* get_node (struct node* head, char* key) {
-    // Se il nodo è NULL Non ha trovato il nodo
+static struct node* get_node (struct node* head, int key) {
+    // Se il nodo corrente è NULL Non ha trovato il nodo che cercava (è in fondo alla lista o la lista è vuota)
     if (!head) return NULL;
     // Se il nodo corrente ha la stessa chiave della chiave cercata lo restituisce
-    if (EQUALS(key, head->key)) return head;
+    if (key == head->key) return head;
     // Altrimenti restituisce il risultato della ricerca nei prossimi nodi
     return get_node(head->next, key);
 }
@@ -108,18 +109,18 @@ int destroy_list (pair_list_t* list) {
  * 
  * @param list Lista in cui cercare l'elemento
  * @param key Chiave dell'elemento
- * @return int Valore associato all'elemento. Se non esiste un elemento con quella chiave restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ * @return char* Valore associato all'elemento. Se c'è un errore restituisce NULL e setta errno.
  */
-int get_value_list (pair_list_t* list, char* key) {
+char* get_value_list (pair_list_t* list, int key) {
     // Controlla che i parametri siano corretti
-    ASSERT_ERRNO_RETURN(key != NULL, EINVAL, -1);
+    ASSERT_ERRNO_RETURN(key > -1, EINVAL, NULL);
     // Se la dimensione della coda è 0 non c'è niente da cercare
-    if (list->elements == 0) return -1;
+    ASSERT_ERRNO_RETURN(list->elements > 0, ENOKEY, NULL);
     // Cerca il nodo nella lista
     struct node* found = get_node(list->head, key);
     // Se il nodo non è stato trovato non esiste
-    ASSERT_RETURN(found != NULL, 0);
-    // Restituisce il valore nella coppia
+    ASSERT_ERRNO_RETURN(found != NULL, ENOKEY, NULL);
+    // Restituisce il valore
     return found->value;
 }
 
@@ -129,11 +130,11 @@ int get_value_list (pair_list_t* list, char* key) {
  * @param list Lista in cui inserire l'elemento
  * @param key Chiave della coppia
  * @param value Valore associato alla chiave
- * @return int Se l'elemento è stato inserito correttamente restituisce 1. Se l'elemento era già presente restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ * @return int Se l'elemento è stato inserito correttamente restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
-int insert_list (pair_list_t* list, char* key, int value) {
+int insert_list (pair_list_t* list, int key, char* value) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((key != NULL) && (value > -1), EINVAL, -1);
+    ASSERT_ERRNO_RETURN((key > -1) && (value != NULL), EINVAL, -1);
     // Cerca, se esiste, il nodo corrispondente alla chiave che si vuole inserire
     if (list->elements > 0) {
         struct node* found = get_node(list->head, key);
@@ -150,8 +151,8 @@ int insert_list (pair_list_t* list, char* key, int value) {
     list->head = new;
     // Incrementa il contatore
     list->elements++;
-    // Restituisce il risultato
-    return 1;
+    // Restituisce il successo
+    return 0;
 }
 
 /**
@@ -159,18 +160,18 @@ int insert_list (pair_list_t* list, char* key, int value) {
  * 
  * @param list Puntatore alla testa della lista
  * @param key Chiave che identifica la coppia
- * @return int Valore che era associato a key nella lista. Se l'elemento non era presente restituisce -1. Se c'è un errore restituisce -1 e setta errno.
+ * @return char* Valore che era associato a key nella lista. Se c'è un errore restituisce NULL e setta errno.
  */
-int remove_list (pair_list_t* list, char* key) {
+char* remove_list (pair_list_t* list, int key) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((list != NULL) && (key != NULL), EINVAL, -1);
+    ASSERT_ERRNO_RETURN((list != NULL) && (key > -1), EINVAL, NULL);
     // Se la dimensione è 0 non c'è niente da rimuovere
-    if (list->elements == 0) return 0;
+    ASSERT_ERRNO_RETURN(list->elements > 0, ENOKEY, NULL);
     // Cerca il nodo da rimuovere
     struct node* found = get_node(list->head, key);
     ASSERT_RETURN(found != NULL, 0);
     // Prende il valore associato
-    int value = found->value;
+    char* value = found->value;
     // Rimuove il nodo dalla coda
     if (found->prev) found->prev->next = found->next;
     if (found->next) found->next->prev = found->prev;
@@ -179,6 +180,7 @@ int remove_list (pair_list_t* list, char* key) {
     destroy_nodes(found);
     // Decrementa il numero totale di nodi
     list->elements--;
+    // Se non ci sono più nodi invalida il riferimento alla lista
     if (list->elements == 0) list->head = NULL;
     // Restituisce il valore associato a key nella lista
     return value;
