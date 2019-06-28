@@ -1,7 +1,7 @@
 /**
  * @file pair_list.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Header della libreria di creazione e gestione di una lista concatenata di coppie (chiave, valore).
+ * @brief Header della libreria di creazione e gestione di una lista concatenata di coppie (chiave, valore) di tipo (intero, stringa).
  * @version 0.1
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
@@ -16,8 +16,8 @@
  * 
  */
 struct node {
-    char* key;
-    int value;
+    int key;
+    char* value;
     struct node* next;
     struct node* prev;
 };
@@ -38,7 +38,7 @@ pair_list_t* create_list ();
  * @brief Distrugge la lista puntata
  * 
  * @param list Lista da deallocare
- * @return int Se la lista è stata eliminata correttamente restituisce 1. Se c'è un errore restituisce -1 e setta errno.
+ * @return int Se la lista è stata eliminata correttamente restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
 int destroy_list (pair_list_t* list);
 
@@ -47,9 +47,9 @@ int destroy_list (pair_list_t* list);
  * 
  * @param list Lista in cui cercare l'elemento
  * @param key Chiave dell'elemento
- * @return int Valore associato all'elemento. Se non esiste un elemento con quella chiave restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ * @return char* Valore associato all'elemento. Se c'è un errore restituisce NULL e setta errno.
  */
-int get_value_list (pair_list_t* list, char* key);
+char* get_value_list (pair_list_t* list, int key);
 
 /**
  * @brief Inserise una nuova coppia nella lista
@@ -57,17 +57,17 @@ int get_value_list (pair_list_t* list, char* key);
  * @param list Lista in cui inserire l'elemento
  * @param key Chiave della coppia
  * @param value Valore associato alla chiave
- * @return int Se l'elemento è stato inserito correttamente restituisce 1. Se l'elemento era già presente restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ * @return int Se l'elemento è stato inserito correttamente restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
-int insert_list (pair_list_t* list, char* key, int value);
+int insert_list (pair_list_t* list, int key, char* value);
 
 /**
  * @brief Rimuove il nodo identificato dalla chiave
  * 
  * @param list Puntatore alla testa della lista
  * @param key Chiave che identifica la coppia
- * @return int Valore che era associato a key nella lista. Se l'elemento non era presente restituisce -1. Se c'è un errore restituisce -1 e setta errno.
+ * @return char* Valore che era associato a key nella lista. Se c'è un errore restituisce NULL e setta errno.
  */
-int remove_list (pair_list_t* list, char* key);
+char* remove_list (pair_list_t* list, int key);
 
 #endif // _LIST

@@ -1,7 +1,7 @@
 /**
  * @file hashtable.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Header della libreria di creazione e gestione di una tabella hash di coppie (stringa, intero) memorizzata con liste di trabocco.
+ * @brief Header della libreria di creazione e gestione di una tabella hash di coppie (intero, stringa) memorizzata con liste di trabocco.
  * La libreria usa 16 lock per partizionare la tabella e garantire l'accesso in mutua esclusione alla tabella.
  * @version 0.1
  * 
@@ -34,7 +34,7 @@ hashtable_t* create_hashtable ();
  * @brief Libera la memoria occupata dalla tabella passata
  * 
  * @param table Tabella da eliminare
- * @return int Se l'eliminazione è avvenuta correttamente restituisce 1. Se c'è un errore restituisce -1 e setta errno.
+ * @return int Se l'eliminazione è avvenuta correttamente restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
 int destroy_hashtable (hashtable_t* table);
 
@@ -44,26 +44,26 @@ int destroy_hashtable (hashtable_t* table);
  * @param table Tabella in cui inserire l'elemento
  * @param key Chiave che identifica l'elemento
  * @param value Valore associato all'elemento
- * @return int Se l'elemento è stato inserito con successo restituisce 1. Se un elemento con la stessa chiave esiste già restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ * @return int Se l'elemento è stato inserito con successo restituisce 0. Se un elemento con la stessa chiave esiste già restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
-int insert_hashtable (hashtable_t* table, char* key, int value);
+int insert_hashtable (hashtable_t* table, int key, char* value);
 
 /**
  * @brief Rimuove in mutua esclusione un elemento dalla tabella
  * 
  * @param table Tabella da cui rimuovere l'elemento
  * @param key Chiave che identifica l'elemento
- * @return int Valore che era associato alla chiave. Se l'elemento identificato da key non esiste restituisce -1. Se c'è un errore restituisce -1 e setta errno.
+ * @return char* Valore che era associato alla chiave. Se c'è un errore restituisce NULL e setta errno.
  */
-int remove_hashtable (hashtable_t* table, char* key);
+char* remove_hashtable (hashtable_t* table, int key);
 
 /**
  * @brief Prende il valore associato alla chiave nella tabella.
  * 
  * @param table Tabella da cui recuperare l'elemento
  * @param key Chiave che identifica l'elemento
- * @return int Valore associato alla chiave nella tabella. Se l'elemento non esiste restituisce 0. Se c'è un errore restituisce -1.
+ * @return char* Valore associato alla chiave nella tabella. Se c'è un errore restituisce NULL e setta errno.
  */
-int retrieve_hashtable (hashtable_t* table, char* key);
+char* retrieve_hashtable (hashtable_t* table, int key);
 
 #endif // _HASHTABLE

@@ -26,17 +26,13 @@
 static pthread_mutex_t mutexes[MUTEX_NUMBER];
 
 /**
- * @brief Funzione hash che usa l'algoritmo djb2 (http://www.cse.yorku.ca/~oz/hash.html)
+ * @brief Semplice funzione hash
  * 
  * @param key Chiave di cui calcolare l'hash
  * @return int Hash della chiave
  */
-static int hash_function (char* key) {
-    unsigned long hash = 5381;
-    int c;
-    while ((c = *key++))
-        hash = ((hash << 5) + hash) + c;
-    return (hash % HASHTABLE_SIZE);
+static int hash_function (int key) {
+    return (key * 31 + 11) % HASHTABLE_SIZE;
 }
 
 /**
@@ -101,13 +97,11 @@ int destroy_hashtable (hashtable_t* table) {
  * @param table Tabella in cui inserire l'elemento
  * @param key Chiave che identifica l'elemento
  * @param value Valore associato all'elemento
- * @return int Se l'elemento è stato inserito con successo restituisce 1. Se un elemento con la stessa chiave esiste già restituisce 0. Se c'è un errore restituisce -1.
+ * @return int Se l'elemento è stato inserito con successo restituisce 0. Se un elemento con la stessa chiave esiste già restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
-int insert_hashtable (hashtable_t* table, char* key, int value) {
+int insert_hashtable (hashtable_t* table, int key, char* value) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN(table != NULL, EINVAL, -1);
-    ASSERT_ERRNO_RETURN(key != NULL, EINVAL, -1);
-    ASSERT_ERRNO_RETURN(value > -1, EINVAL, -1);
+    ASSERT_ERRNO_RETURN((table != NULL) && (key > -1) && (value != NULL), EINVAL, -1)
     // Calcola l'hash dell'elemento
     int hash = hash_function(key);
     // Prende la lock associata all'elemento
@@ -118,7 +112,7 @@ int insert_hashtable (hashtable_t* table, char* key, int value) {
     // Rilascia la lock
     LOCK_RELEASE(mutex, return -1);
     // Incrementa il numero di elementi nella tabella
-    if (success == 1) table->elements++;
+    if (success != -1) table->elements++;
     // Restituisce il successo dell'operazione
     return success;
 }
@@ -128,20 +122,20 @@ int insert_hashtable (hashtable_t* table, char* key, int value) {
  * 
  * @param table Tabella da cui rimuovere l'elemento
  * @param key Chiave che identifica l'elemento
- * @return int Valore che era associato alla chiave. Se l'elemento identificato da key non esiste restituisce -1. Se c'è un errore restituisce -1 e setta errno.
+ * @return char* Valore che era associato alla chiave. Se c'è un errore restituisce NULL e setta errno.
  */
-int remove_hashtable (hashtable_t* table, char* key) {
+char* remove_hashtable (hashtable_t* table, int key) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((table != NULL) && (key != NULL), EINVAL, -1);
+    ASSERT_ERRNO_RETURN((table != NULL) && (key > -1), EINVAL, NULL);
     // Calcola l'hash della chiave come indice della tabella
     int hash = hash_function(key);
     // Prende la lock associata all'elemento
     pthread_mutex_t* mutex = &(mutexes[hash / MUTEX_NUMBER]);
-    LOCK_ACQUIRE(mutex, return -1);
+    LOCK_ACQUIRE(mutex, return NULL);
     // Rimuove l'elemento nella lista
-    int value = remove_list(table->entries[hash], key);
+    char* value = remove_list(table->entries[hash], key);
     // Rilascia la lock associata all'elemento
-    LOCK_RELEASE(mutex, return -1);
+    LOCK_RELEASE(mutex, return NULL);
     // Restituisce il valore associato alla chiave nella lista
     return value;
 }
@@ -151,20 +145,20 @@ int remove_hashtable (hashtable_t* table, char* key) {
  * 
  * @param table Tabella da cui recuperare l'elemento
  * @param key Chiave che identifica l'elemento
- * @return int Valore associato alla chiave nella tabella. Se l'elemento non esiste restituisce 0. Se c'è un errore restituisce -1.
+ * @return char* Valore associato alla chiave nella tabella. Se c'è un errore restituisce NULL e setta errno.
  */
-int retrieve_hashtable (hashtable_t* table, char* key) {
+char* retrieve_hashtable (hashtable_t* table, int key) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((table != NULL) && (key != NULL), EINVAL, -1);
+    ASSERT_ERRNO_RETURN((table != NULL) && (key > -1), EINVAL, NULL);
     // Calcola l'hash della chiave
     int hash = hash_function(key);
     // Recupera la lock associata alla lista
     pthread_mutex_t* mutex = &(mutexes[hash / MUTEX_NUMBER]);
-    LOCK_ACQUIRE(mutex, return -1);
+    LOCK_ACQUIRE(mutex, return NULL);
     // Recupera l'elemento
-    int value = get_value_list(table->entries[hash], key);
+    char* value = get_value_list(table->entries[hash], key);
     // Rilascia la lock
-    LOCK_RELEASE(mutex, return -1);
+    LOCK_RELEASE(mutex, return NULL);
     // Restituisce l'elemento, se esiste
     return value;
 }
