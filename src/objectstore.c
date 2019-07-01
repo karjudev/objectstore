@@ -11,7 +11,10 @@
 #include <sys/time.h>
 
 #include <assertmacros.h>
+#include <shared.h>
+
 #include <socket/socket.h>
+#include <workers/workers.h>
 
 #include <shared.h>
 
@@ -25,13 +28,13 @@ int terminated = 0;
  */
 void send_error (int client_fd) {
     // Inizializza il buffer che contiene l'errore
-    char* err_buffer = malloc(sizeof(char) * 7);
-    ASSERT_MESSAGE_RETURN(err_buffer != NULL, "Allocating buffer for error",);
+    char* err_buffer = (char*) calloc(MAX_HEADER_LENGTH, sizeof(char));
+    ASSERT_MESSAGE(err_buffer != NULL, "Allocating buffer for error", return);
     // Costruisce la stringa formattata
     sprintf(err_buffer, "KO %d \n", errno);
     // Scrive la stringa sul buffer
-    int success = send_message(client_fd, err_buffer, 7);
-    ASSERT_MESSAGE_RETURN(success != -1, "Writing error message to client",);
+    int success = send_message(client_fd, err_buffer, MAX_HEADER_LENGTH);
+    ASSERT_MESSAGE(success != -1, "Writing error message to client", return);
     // Libera il buffer
     free(err_buffer);
 }
@@ -57,11 +60,21 @@ void send_ok (int client_fd) {
 }
 
 int handle_registration (int client_fd, char* name) {
+    // Registra l'utente nel sistema
+    int success = register_user(client_fd, name);
+    // Controlla che sia andato tutto bene
+    ASSERT_MESSAGE_RETURN(success == 0, "Registering user", -1);
+    // Restituisce il successo
     send_ok(client_fd);
     return 0;
 }
 
 int handle_deletion (int client_fd, char* name) {
+    // Rimuove l'utente dal sistema
+    int success = delete_block(client_fd, name);
+    // Controlla che l'operazione sia avvenuta con successo
+    ASSERT_MESSAGE_RETURN(success == 0, "Deleting block", -1);
+    // Restituisce il successo
     send_ok(client_fd);
     return 0;
 }
@@ -69,7 +82,10 @@ int handle_deletion (int client_fd, char* name) {
 int handle_storing (int client_fd, char* name, size_t length) {
     // Legge i dati
     void* data = receive_message(client_fd, length);
-    ASSERT_RETURN(data != NULL, -1);
+    ASSERT_MESSAGE_RETURN(data != NULL, "Receiving data to store", -1);
+    // Scrive i dati sul disco
+    int success = store_block(client_fd, name, data, length);
+    ASSERT_MESSAGE_RETURN(success != -1, "Storing block", -1);
     free(data);
     // Invia l'ok
     send_ok(client_fd);
@@ -77,19 +93,32 @@ int handle_storing (int client_fd, char* name, size_t length) {
 }
 
 int handle_retrieving (int client_fd, char* name) {
-    // Recupera il blocco
-    int data[10];
-    for (int i = 0; i < 10; i++) data[i] = i;
-    // Crea l'header
+    // Alloca l'header del messaggio
     char* header = (char*) calloc(MAX_HEADER_LENGTH, sizeof(char));
-    sprintf(header, "DATA %zu \n", sizeof(data));
-    // Invia l'header
+    ASSERT_MESSAGE_RETURN(header != NULL, "Creating response header", -1);
+    // Recupera il blocco
+    size_t size;
+    void* block = retrieve_block(client_fd, name, &size);
+    ASSERT_MESSAGE(block != NULL, "Retrieving data block", free(header); return -1);
+    // Costruisce e invia l'header
+    sprintf(header, "DATA %zu \n", size);
     int success = send_message(client_fd, header, sizeof(char) * MAX_HEADER_LENGTH);
     free(header);
-    ASSERT_RETURN(success != -1, -1);
+    ASSERT_MESSAGE_RETURN(success != -1, "Sending response header", -1);
     // Invia il blocco
-    success = send_message(client_fd, data, sizeof(data));
-    return success;
+    success = send_message(client_fd, block, size);
+    ASSERT_MESSAGE_RETURN(success != -1, "Sending response data", -1);
+    // Libera la memoria occupata dal blocco
+    free(block);
+    // Restituisce il flag del successo
+    return 0;
+}
+
+int handle_leaving (int client_fd) {
+    // Elimina l'utente dal sistema
+    leave_client(client_fd);
+    // Restituisce il flag 1 che indica la terminazione della connessione
+    return 1;
 }
 
 /**
@@ -124,16 +153,12 @@ void* signal_handler (void* ptr) {
  * @return int 0 se la richiesta è stata gestita con successo, 1 se la richiesta è di terminazione. Se c'è un errore restituisce -1 e setta errno.
  */
 int parse_request (int client_fd, char* header) {
-    // Controlla che la richiesta sia di terminazione
-    if (strncmp(header, "LEAVE \n", 8) == 0) return 1;
     // Verbo nell'header
     char* verb = (char*) calloc(9, sizeof(char));
     // Nome nell'header
     char* name = (char*) calloc(255, sizeof(char));
     // Dimensione nell'header
     size_t length = 0;
-    // Stampa un messaggio di log
-    printf("Client %d sent %s", client_fd, header);
     // Analizza la stringa di header estraendo le informazioni
     sscanf(header, "%s %s %zu \n", verb, name, &length);
     // Risultato della computazione
@@ -148,6 +173,8 @@ int parse_request (int client_fd, char* header) {
         success = handle_storing(client_fd, name, length);
     else if (EQUALS(verb, "RETRIEVE"))
         success = handle_retrieving(client_fd, name);
+    else if (EQUALS(verb, "LEAVE"))
+        success = handle_leaving(client_fd);
     // Se non ha trovato un verbo riconosciuto invia un errore
     else success = -1;
     // Libera la memoria occupata dalle stringhe
@@ -159,7 +186,7 @@ int parse_request (int client_fd, char* header) {
 /**
  * @brief Legge un header dal client ed avvia la procedura associata.
  * 
- * @param ptr Puntatore al file descriptor del client
+ * @param ptr Puntatore != -1al file descriptor del client
  * @return void* Sempre NULL dato che la funzione non restituisce nulla
  */
 void* connection_handler (void* ptr) {
@@ -169,8 +196,14 @@ void* connection_handler (void* ptr) {
     while (!terminated) {
         // Header del messaggio
         char* header = receive_message(client_fd, sizeof(char) * MAX_HEADER_LENGTH);
-        // Se non ci riesce libera la memoria, invia un errore e ritorna all'iterazione successiva
-        ASSERT_MESSAGE(header != NULL, "Reading header", free(header); send_error(client_fd); continue);
+        // Se non ci riesce la pipe è stata interrotta, quindi esce
+        if (!header) {
+            fprintf(stderr, "Client %d: It was not possible to retrieve header. Closing connection\n", client_fd);
+            free(header);
+            break;
+        }
+        // Stampa un messaggio di log
+        printf("Client %d: %s", client_fd, header);
         // Avvia la gestione della richiesta
         int result = parse_request(client_fd, header);
         // Libera la memoria occupata dall'header
@@ -190,6 +223,7 @@ int main(int argc, char const *argv[]) {
     // Crea una maschera per SIGINT e SIGUSR1
     sigset_t set;
     ASSERT_MESSAGE(sigemptyset(&set) != -1, "Emptying signal mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGPIPE) != -1, "Adding SIGPIPE to mask", exit(1));
     ASSERT_MESSAGE(sigaddset(&set, SIGINT) != -1, "Adding SIGINT to mask", exit(1));
     ASSERT_MESSAGE(sigaddset(&set, SIGUSR1) != -1, "Adding SIGUSR1 to mask", exit(1));
     // Maschera questi segnali per tutti i thread
@@ -201,10 +235,13 @@ int main(int argc, char const *argv[]) {
     int server_fd = create_server_socket(SOCKET_NAME);
     // Controlla che la creazione sia andata a buon fine oppure esce
     ASSERT_MESSAGE(server_fd != -1, "Creating server socket", exit(1));
+    // Inizializza le funzioni worker
+    int success = init_worker_functions();
+    ASSERT_MESSAGE(success != -1, "Initializing workers", exit(1));
     // Crea il file descriptor set per accettare nuove connessioni
     fd_set fset = create_fd_set(server_fd);
     // Crea il timeout per far attendere il selettore
-    struct timeval timeout; timeout.tv_sec = 1; timeout.tv_usec = 0;
+    struct timeval timeout = {1, 0};
     // Stampa un messaggio di log
     printf("Server started on file descriptor %d and waiting for connections\n", server_fd);
     // Loop in cui attende nuove connessioni
@@ -221,6 +258,9 @@ int main(int argc, char const *argv[]) {
             pthread_detach(thread);
         }
     }
+    // Libera la memoria occupata dalle funzioni worker
+    ASSERT_MESSAGE(stop_worker_functions() != -1, "Stopping workers", exit(1));
+    printf("Stopped workers\n");
     // Chiude il socket del server, altrimenti stampa un messaggio
     printf("Server is closing\n");
     ASSERT_MESSAGE(pthread_join(sig_handler_id, NULL) == 0, "Joining signal handling socket", exit(1));

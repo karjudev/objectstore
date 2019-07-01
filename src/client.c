@@ -24,6 +24,13 @@ static byte* create_test_array (size_t size) {
     return array;
 }
 
+static int data_corresponding (byte* array_a, byte* array_b, size_t size) {
+    for (int i = 0; i < size; i++)
+        if (array_a[i] != array_b[i])
+            return 0;
+    return 1;
+}
+
 /**
  * @brief Memorizza 20 blocchi di dati da 100B a 100KB, come sequenze di interi consecutivi
  */
@@ -32,22 +39,16 @@ static void store_data () {
     char name[2] = "A";
     // Buffer da 100KB
     byte* array = create_test_array(100000);
-    ASSERT_MESSAGE(array != NULL, "Allocating test array", exit(1));
+    ASSERT_MESSAGE(array != NULL, "Allocating test array", return);
     // Invia 20 buffer in ordine
     int step = (100000 - 100) / 20;
     for (size_t size = 100; size <= 100000; size += step) {
-        printf("Storing %s of size %zu\n", name, size);
-        ASSERT_MESSAGE(os_store(name, array, size) != -1, "Storing message", free(array); exit(1));
+        ASSERT_MESSAGE(os_store(name, array, size) == 1, "Storing message", free(array); return);
+        printf("Stored block %s of size %ld\n", name, size);
         name[0]++;
     }
     // Libera la memoria occupata dall'array
     free(array);
-}
-
-int data_corresponding (byte* array_a, byte* array_b, size_t size) {
-    for (int i = 0; i < size; i++)
-        if (array_a[i] != array_b[i]) return 0;
-    return 1;
 }
 
 /**
@@ -56,36 +57,38 @@ int data_corresponding (byte* array_a, byte* array_b, size_t size) {
 static void retrieve_data () {
     // Byte array di prova
     byte* array = create_test_array(100000);
-    // Dimensione del buffer in arrivo
-    size_t size = 100;
     // Step con cui aumenta la dimensione dei dati
     int step = (100000 - 100) / 20; 
     // Nome della risorsa
     char name[2] = "A";
-    for (int i = 0; i < 20; i++) {
+    for (size_t size = 100; size <= 100000; size += step) {
         // Richiede i dati al server
         byte* data = os_retrieve(name);
-        ASSERT_MESSAGE(data != NULL, "Getting data", free(data); free(array); exit(1));
+        ASSERT_MESSAGE(data != NULL, "Getting data", free(data); free(array); return);
         // Verifica che i dati siano uguali
-        ASSERT_MESSAGE(data_corresponding(data, array, size), "Data are not corresponding", free(data); free(array); exit(1));
+        ASSERT_MESSAGE(data_corresponding(data, array, size), "Data are not corresponding", free(data); free(array); return);
         // Libera la memoria occupata dai dati appena ricevuti
         free(data);
-        // Aumenta la dimensione del prossimo buffer
-        size += step;
+        // Stampa un messaggio di log
+        printf("Successifully retrieved block %s of size %ld\n", name, size);
         // Cambia il nome
         name[0]++;
     }
+    // Libera la memoria occupata dall'array di prova
+    free(array);
 }
 
 /**
- * @brief Cancella 20 blocchi di dati
+ * @brief Cancella 20 blocchi di dati!= -1
  */
 static void delete_data () {
     // Nome del blocco
     char name[2] = "A";
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i <= 20; i++) {
         // Cancella il blocco
-        ASSERT_MESSAGE(os_delete(name) != -1, "Deleting data", exit(1));
+        ASSERT_MESSAGE(os_delete(name) == 1, "Deleting data", return);
+        // Stampa un messaggio di log
+        printf("Deleted file %s\n", name);
         // Incrementa il nome
         name[0]++;
     }
@@ -107,7 +110,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     // Si connette al server con il nome scelto
-    ASSERT_MESSAGE(os_connect(name) == 1, "Connecting to socket", exit(1));
+    ASSERT_MESSAGE(os_connect(name) == 1, "Connecting to socket", return 1);
     printf("Connected with name %s\n", name);
     // Libera la memoria occupata dal nome
     free(name);
@@ -119,6 +122,7 @@ int main(int argc, char *argv[]) {
     else if (test_number == 3)
         delete_data();
     // Si disconnette
-    ASSERT_MESSAGE(os_disconnect() == 1, "Leaving connection", exit(1));
+    ASSERT_MESSAGE(os_disconnect() == 1, "Leaving connection", return 1);
     printf("Disconnesso\n");
+    return 0;
 }
