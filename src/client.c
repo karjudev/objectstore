@@ -84,7 +84,7 @@ static void retrieve_data () {
 static void delete_data () {
     // Nome del blocco
     char name[2] = "A";
-    for (int i = 0; i <= 20; i++) {
+    for (int i = 0; i < 20; i++) {
         // Cancella il blocco
         ASSERT_MESSAGE(os_delete(name) == 1, "Deleting data", return);
         // Stampa un messaggio di log
