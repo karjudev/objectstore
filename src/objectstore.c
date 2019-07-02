@@ -43,10 +43,17 @@ void send_error (int client_fd) {
  * @brief Stampa un report sullo standard output
  */
 void print_report () {
+    // Numero di client connessi
     int clients = 0;
+    // Numero di oggetti nello store
     int objects = 0;
+    // Dimensione totale dello store
     int size = 0;
-    printf("Client connessi: %d\nNumero di oggetti: %d\nSize totale: %d\n", clients, objects, size);
+    // Recupera le informazioni necessarie
+    int success = get_report(&clients, &objects, &size);
+    ASSERT_MESSAGE(success != -1, "Retrieving client", return);
+    // Stampa le informazioni
+    printf("[REPORT] Connected clients: %d Object number: %d Total size: %dB\n", clients, objects, size);
 }
 
 /**
@@ -136,7 +143,7 @@ void* signal_handler (void* ptr) {
         // Attende un segnale
         ASSERT_MESSAGE(sigwait(&set, &signal) != -1, "Waiting for signal", pthread_exit(NULL));
         // Riconosce il tipo di segnale
-        if (signal == SIGINT)
+        if (signal == SIGINT || signal == SIGTERM || signal == SIGQUIT)
             terminated = 1;
         else if (signal == SIGUSR1)
             print_report();
@@ -220,11 +227,13 @@ void* connection_handler (void* ptr) {
 }
 
 int main(int argc, char const *argv[]) {
-    // Crea una maschera per SIGINT e SIGUSR1
+    // Crea una maschera per mascherare i segnali che intende gestire
     sigset_t set;
     ASSERT_MESSAGE(sigemptyset(&set) != -1, "Emptying signal mask", exit(1));
     ASSERT_MESSAGE(sigaddset(&set, SIGPIPE) != -1, "Adding SIGPIPE to mask", exit(1));
     ASSERT_MESSAGE(sigaddset(&set, SIGINT) != -1, "Adding SIGINT to mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGTERM) != -1, "Adding SIGTERM to mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGQUIT) != -1, "Adding SIGQUIT to mask", exit(1));
     ASSERT_MESSAGE(sigaddset(&set, SIGUSR1) != -1, "Adding SIGUSR1 to mask", exit(1));
     // Maschera questi segnali per tutti i thread
     ASSERT_MESSAGE(pthread_sigmask(SIG_SETMASK, &set, NULL) == 0, "Applying signal mask", exit(1));

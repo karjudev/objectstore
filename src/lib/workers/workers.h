@@ -71,4 +71,14 @@ int delete_block (int client_fd, char* name);
  */
 void leave_client (int client_fd);
 
+/**
+ * @brief Scrive le informazioni di report sui puntatori passati
+ * 
+ * @param clients_ptr Puntatore al numero di client connessi
+ * @param objects_ptr Puntatore al numero di oggetti salvati
+ * @param size_ptr Puntatore alla dimensione totale dello store
+ * @return int Se le informazioni sono state estratte con successo restituisce 0. Se c'è un errore restituisce -1 e setta errno. 
+ */
+int get_report (int* clients_ptr, int* objects_ptr, int* size_ptr);
+
 #endif // _WORKERS

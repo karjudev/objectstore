@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <ftw.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -19,6 +20,10 @@
 
 // Tabella hash in cui memorizzare le coppie (username, file descriptor)
 static hashtable_t* table;
+// Numero totale di oggetti nello store
+static int objects_count;
+// Dimensione totale dello store
+static size_t total_size;
 
 static size_t get_file_size (char* file_name) {
     struct stat sb = {0};
@@ -212,4 +217,36 @@ int delete_block (int client_fd, char* name) {
 void leave_client (int client_fd) {
     // Rimuove se esiste il descrittore dalla tabella hash
     remove_hashtable(table, client_fd);
+}
+
+static int count_file_number_size (const char* filename, const struct stat* sb, int typeflag) {
+    // Se l'elemento corrente è un file incrementa il numero di file
+    if (typeflag == FTW_F)
+        objects_count++;
+    // Incrementa la dimensione totale
+    total_size += sb->st_size;
+    // Restituisce il successo
+    return 0;
+}
+
+/**
+ * @brief Scrive le informazioni di report sui puntatori passati
+ * 
+ * @param clients_ptr Puntatore al numero di client connessi
+ * @param objects_ptr Puntatore al numero di oggetti salvati
+ * @param size_ptr Puntatore alla dimensione totale dello store
+ * @return int Se le informazioni sono state estratte con successo restituisce 0. Se c'è un errore restituisce -1 e setta errno. 
+ */
+int get_report (int* clients_ptr, int* objects_ptr, int* size_ptr) {
+    // Conta il numero di files e dimensione totale
+    total_size = 0;
+    objects_count = 0;
+    int success = ftw("./data", count_file_number_size, 0);
+    ASSERT_RETURN(success != -1, -1);
+    *size_ptr = total_size;
+    *objects_ptr = objects_count;
+    // Conta il numero di client connessi
+    *clients_ptr = table->elements;
+    // Restituisce il successo
+    return 0;
 }

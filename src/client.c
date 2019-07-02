@@ -41,7 +41,7 @@ static void store_data () {
     byte* array = create_test_array(100000);
     ASSERT_MESSAGE(array != NULL, "Allocating test array", return);
     // Invia 20 buffer in ordine
-    int step = (100000 - 100) / 20;
+    int step = (100000 - 100) / 19;
     for (size_t size = 100; size <= 100000; size += step) {
         ASSERT_MESSAGE(os_store(name, array, size) == 1, "Storing message", free(array); return);
         printf("Stored block %s of size %ld\n", name, size);
@@ -58,7 +58,7 @@ static void retrieve_data () {
     // Byte array di prova
     byte* array = create_test_array(100000);
     // Step con cui aumenta la dimensione dei dati
-    int step = (100000 - 100) / 20; 
+    int step = (100000 - 100) / 19; 
     // Nome della risorsa
     char name[2] = "A";
     for (size_t size = 100; size <= 100000; size += step) {
