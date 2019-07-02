@@ -138,8 +138,8 @@ int insert_list (pair_list_t* list, int key, char* value) {
     // Cerca, se esiste, il nodo corrispondente alla chiave che si vuole inserire
     if (list->elements > 0) {
         struct node* found = get_node(list->head, key);
-        // Se l'elemento era già presente restituisce 0
-        ASSERT_RETURN(found == NULL, 0);
+        // Se l'elemento era già presente restituisce un errore
+        ASSERT_ERRNO_RETURN(found == NULL, EALREADY, -1);
     }
     // Crea un nuovo elemento
     struct node* new = create_node(key, value);

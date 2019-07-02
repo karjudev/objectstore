@@ -116,9 +116,11 @@ void* os_retrieve (char* name) {
     char* res_header = receive_message(server_fd, MAX_HEADER_LENGTH);
     ASSERT_RETURN(res_header != NULL, 0);
     // Legge la dimensione dei dati in arrivo
-    size_t size;
+    size_t size = 0;
     sscanf(res_header, "DATA %zu \n", &size);
     free(res_header);
+    // Se l'header non è arrivato con successo esce
+    ASSERT_ERRNO_RETURN(size > 0, EINVAL, 0);
     // Riceve effettivamente i dati
     void* data = receive_message(server_fd, size);
     ASSERT_RETURN(data != NULL, 0);

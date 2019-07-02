@@ -109,10 +109,10 @@ int insert_hashtable (hashtable_t* table, int key, char* value) {
     LOCK_ACQUIRE(mutex, return -1);
     // Inserisce, se esiste, l'elemento nella tabella
     int success = insert_list(table->entries[hash], key, value);
-    // Rilascia la lock
-    LOCK_RELEASE(mutex, return -1);
     // Incrementa il numero di elementi nella tabella
     if (success != -1) table->elements++;
+    // Rilascia la lock
+    LOCK_RELEASE(mutex, return -1);
     // Restituisce il successo dell'operazione
     return success;
 }
@@ -134,6 +134,8 @@ char* remove_hashtable (hashtable_t* table, int key) {
     LOCK_ACQUIRE(mutex, return NULL);
     // Rimuove l'elemento nella lista
     char* value = remove_list(table->entries[hash], key);
+    // Decrementa il numero di elementi nella tabella
+    if (value) table->elements--;
     // Rilascia la lock associata all'elemento
     LOCK_RELEASE(mutex, return NULL);
     // Restituisce il valore associato alla chiave nella lista
