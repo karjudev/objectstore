@@ -33,65 +33,92 @@ static int data_corresponding (byte* array_a, byte* array_b, size_t size) {
 
 /**
  * @brief Memorizza 20 blocchi di dati da 100B a 100KB, come sequenze di interi consecutivi
+ * 
+ * @return Se l'operazione è andata a buon fine restituisce 0. Se c'è un errore restituisce 1 e setta errno.
  */
-static void store_data () {
+static int store_data () {
     // Variabile che contiene il nome del blocco
     char name[2] = "A";
     // Buffer da 100KB
     byte* array = create_test_array(100000);
-    ASSERT_MESSAGE(array != NULL, "Allocating test array", return);
-    // Invia 20 buffer in ordine
-    int step = (100000 - 100) / 19;
-    for (size_t size = 100; size <= 100000; size += step) {
-        ASSERT_MESSAGE(os_store(name, array, size) == 1, "Storing message", free(array); return);
-        printf("Stored block %s of size %ld\n", name, size);
+    ASSERT_MESSAGE_RETURN(array != NULL, "Allocating test array", 1);
+    // Invia 20 messaggi in ordine crescente di dimensione
+    int size = 100;
+    int step = (100000 - 100) / 20;
+    for (int i = 0; i < 19; i++) {
+        ASSERT_MESSAGE(os_store(name, array, size) == 1, "Storing message", free(array); return 1);
+        printf("Stored block %s of size %d\n", name, size);
+        size += step;
         name[0]++;
     }
+    ASSERT_MESSAGE(os_store(name, array, 100000) == 1, "Storing message", free(array); return 1);
+    printf("Stored block %s of size 100000\n", name);
     // Libera la memoria occupata dall'array
     free(array);
+
+    return 0;
+}
+
+static int compare_data (char* name, byte* array, int size) {
+    // Richiede i dati al server
+    byte* data = os_retrieve(name);
+    ASSERT_MESSAGE(data != NULL, "Getting data", free(data); return 1);
+    // Verifica che i dati siano uguali
+    ASSERT_MESSAGE(data_corresponding(data, array, size), "Data are not corresponding", free(data); return 1);
+    // Libera la memoria occupata dai dati appena ricevuti
+    free(data);
+    // Stampa un messaggio di log
+    return 0;
 }
 
 /**
  * @brief Recupera 20 blocchi di dati da 100B a 100KB e verifica che siano una sequenza di interi consecutivi
+ * 
+ * @return Se l'operazione è andata a buon fine restituisce 0. Se c'è un errore restituisce 1 e setta errno.
  */
-static void retrieve_data () {
+static int retrieve_data () {
     // Byte array di prova
     byte* array = create_test_array(100000);
     // Step con cui aumenta la dimensione dei dati
-    int step = (100000 - 100) / 19; 
+    int step = (100000 - 100) / 20;
     // Nome della risorsa
     char name[2] = "A";
-    for (size_t size = 100; size <= 100000; size += step) {
-        // Richiede i dati al server
-        byte* data = os_retrieve(name);
-        ASSERT_MESSAGE(data != NULL, "Getting data", free(data); free(array); return);
-        // Verifica che i dati siano uguali
-        ASSERT_MESSAGE(data_corresponding(data, array, size), "Data are not corresponding", free(data); free(array); return);
-        // Libera la memoria occupata dai dati appena ricevuti
-        free(data);
-        // Stampa un messaggio di log
-        printf("Successifully retrieved block %s of size %ld\n", name, size);
-        // Cambia il nome
+    // Dimensione della risorsa
+    int size = 100;
+    for (int i = 0; i < 19; i++) {
+        ASSERT(compare_data(name, array, size) == 0, free(array); return 1);
+        printf("Successifully retrieved block %s of size %d\n", name, size);    
+        // Incrementa la dimensione del prossimo blocco
+        size += step;
+        // Cambia il nome del prossimo blocco
         name[0]++;
     }
+    ASSERT_RETURN(compare_data(name, array, 100000) == 0, 1);
+    printf("Successifully retrieved block %s of size 100000\n", name);
     // Libera la memoria occupata dall'array di prova
     free(array);
+    
+    return 0;
 }
 
 /**
- * @brief Cancella 20 blocchi di dati!= -1
+ * @brief Cancella 20 blocchi di dati
+ * 
+ * @return Se l'operazione è andata a buon fine restituisce 0. Se c'è un errore restituisce 1 e setta errno.
  */
-static void delete_data () {
+static int delete_data () {
     // Nome del blocco
     char name[2] = "A";
     for (int i = 0; i < 20; i++) {
         // Cancella il blocco
-        ASSERT_MESSAGE(os_delete(name) == 1, "Deleting data", return);
+        ASSERT_MESSAGE(os_delete(name) == 1, "Deleting data", return 1);
         // Stampa un messaggio di log
         printf("Deleted file %s\n", name);
         // Incrementa il nome
         name[0]++;
     }
+
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -115,14 +142,16 @@ int main(int argc, char *argv[]) {
     // Libera la memoria occupata dal nome
     free(name);
     // Distingue il tipo di test
+    int success = 0;
     if (test_number == 1)
-        store_data();
+        success = store_data();
     else if (test_number == 2)
-        retrieve_data();
+        success = retrieve_data();
     else if (test_number == 3)
-        delete_data();
+        success = delete_data();
     // Si disconnette
     ASSERT_MESSAGE(os_disconnect() == 1, "Leaving connection", return 1);
     printf("Disconnesso\n");
-    return 0;
+    // Restituisce il successo dell'operazione performata
+    return success;
 }
