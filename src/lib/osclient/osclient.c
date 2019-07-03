@@ -64,7 +64,7 @@ int os_connect (char* name) {
     int success = send_header("REGISTER %s \n", name, 0);
     ASSERT_RETURN(success != -1, 0);
     // Riceve la risposta
-    char* response = receive_message(server_fd, 7);
+    char* response = receive_message(server_fd, MAX_HEADER_LENGTH);
     ASSERT(response != NULL, free(response); return 0);
     // Restituisce il valore della risposta
     success = check_response(response);
@@ -92,7 +92,7 @@ int os_store (char* name, void* block, size_t len) {
     success = send_message(server_fd, block, len);
     ASSERT_RETURN(success != -1, 0);
     // Riceve la risposta
-    char* response = receive_message(server_fd, 7);
+    char* response = receive_message(server_fd, MAX_HEADER_LENGTH);
     ASSERT(response != NULL, free(response); return 0);
     // Restituisce il valore della risposta
     success = check_response(response);
@@ -139,7 +139,7 @@ int os_delete (char* name) {
     int success = send_header("DELETE %s \n", name, 0);
     ASSERT_RETURN(success != -1, 0);
     // Attende la risposta
-    char* response = receive_message(server_fd, 7);
+    char* response = receive_message(server_fd, MAX_HEADER_LENGTH);
     // Verifica che sia un ok
     success = check_response(response);
     free(response);
@@ -153,7 +153,8 @@ int os_delete (char* name) {
  */
 int os_disconnect() {
     // Invia al server il comando di leave
-    int success = send_message(server_fd, "LEAVE \n", MAX_HEADER_LENGTH);
+    char leave_string[MAX_HEADER_LENGTH] = "LEAVE \n";
+    int success = send_message(server_fd, leave_string, MAX_HEADER_LENGTH);
     ASSERT_RETURN(success != 1, 0);
     // Chiude la connessione al socket
     success = close_socket(server_fd);

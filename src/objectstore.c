@@ -62,7 +62,9 @@ void print_report () {
  * @param client_fd File descriptor del client
  */
 void send_ok (int client_fd) {
-    int success = send_message(client_fd, "OK \n", 7);
+    // Crea la stringa con scritto ok
+    char ok_string[MAX_HEADER_LENGTH] = "OK \n";
+    int success = send_message(client_fd, ok_string, MAX_HEADER_LENGTH);
     ASSERT(success != -1, send_error(client_fd));
 }
 
