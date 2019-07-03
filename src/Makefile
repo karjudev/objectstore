@@ -3,7 +3,8 @@ LIB = ./lib
 
 # Compilatore e relative opzioni
 CC = gcc -std=c99
-CFLAGS = -g -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB)
+CFLAGS = -g -Wall -Werror -pedantic -pedantic-errors -pthread -L $(LIB) -I $(LIB) \
+-fsanitize=undefined -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer
 
 # Creatore di librerie e relative opzioni
 AR = ar
@@ -47,13 +48,17 @@ $(LIB)/libworkers.a: $(LIB)/workers/workers.o
 # Test valgrind del server
 test-server: objectstore
 	if [ -S ./tmp.sock ]; then rm ./tmp.sock; fi
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./objectstore
+	if [ -d ./data ]; then rm -rf ./data; fi
+	./objectstore
 
 # Test valgrind del client
 test-client: client
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client ugo 1
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client ugo 2
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./client ugo 3
+	./client ugo 1
+	./client ugo 2
+	./client ugo 3
 
 test: all
-	./objectstore
+	./test.sh
+
+clean:
+	rm -rf ./lib/*/*.o ./lib/*.a ./objectstore ./client

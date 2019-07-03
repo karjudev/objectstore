@@ -17,8 +17,8 @@
 // Nome della cartella dati
 #define DATA_DIRECTORY "./data"
 
-// Header di lunghezza massima dato da verbo di lunghezza massima + massima dimensione di un nome di file POSIX + spazio + \n + \0
-#define MAX_HEADER_LENGTH (strlen("RETRIEVE") + 255 + 3)
+// Header di lunghezza massima dato da verbo di lunghezza massima + massima dimensione di un nome di file POSIX + due spazi + \n + \0
+#define MAX_HEADER_LENGTH 267
 
 // Macro che testa se i primi n bytes dell stringa b sono uguali ai primi n bytes della stringa a
 #define EQUALS(a, b) (strcmp(a, b) == 0)
