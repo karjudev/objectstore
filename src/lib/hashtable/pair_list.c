@@ -32,7 +32,7 @@ static struct node* create_node (int key, char* value) {
     ASSERT_ERRNO_RETURN(new != NULL, ENOMEM, NULL);
     // Setta i dati del nodo
     new->key = key;
-    new->value = strdup(value);
+    if (new->value != NULL) new->value = strdup(value);
     // Setta i puntatori a NULL
     new->prev = new->next = NULL;
     // Restituisce il nodo
@@ -134,7 +134,7 @@ char* get_value_list (pair_list_t* list, int key) {
  */
 int insert_list (pair_list_t* list, int key, char* value) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((key > -1) && (value != NULL), EINVAL, -1);
+    ASSERT_ERRNO_RETURN(key > -1, EINVAL, -1);
     // Cerca, se esiste, il nodo corrispondente alla chiave che si vuole inserire
     if (list->elements > 0) {
         struct node* found = get_node(list->head, key);
@@ -164,7 +164,7 @@ int insert_list (pair_list_t* list, int key, char* value) {
  */
 char* remove_list (pair_list_t* list, int key) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((list != NULL) && (key > -1), EINVAL, NULL);
+    ASSERT_ERRNO_RETURN(key > -1, EINVAL, NULL);
     // Se la dimensione è 0 non c'è niente da rimuovere
     ASSERT_ERRNO_RETURN(list->elements > 0, ENOKEY, NULL);
     // Cerca il nodo da rimuovere
@@ -184,4 +184,22 @@ char* remove_list (pair_list_t* list, int key) {
     if (list->elements == 0) list->head = NULL;
     // Restituisce il valore associato a key nella lista
     return value;
+}
+
+/**
+ * @brief Rimuove il nodo di testa della lista
+ * 
+ * @param list Lista da cui rimuovere la testa
+ * @return struct node* Nodo di testa della lista. Se c'è un errore restituisce NULL e setta errno.
+ */
+struct node* remove_head (pair_list_t* list) {
+    // Prende il nodo di testa
+    struct node* head = list->head;
+    // Modifica la testa della lista
+    if (head->next) list->head = head->next;
+    else list->head = NULL;
+    // Decrementa il numero di nodi complessivi
+    list->elements--;
+    // Restituisce il nodo
+    return head;
 }
