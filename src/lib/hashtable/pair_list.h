@@ -70,4 +70,12 @@ int insert_list (pair_list_t* list, int key, char* value);
  */
 char* remove_list (pair_list_t* list, int key);
 
+/**
+ * @brief Rimuove il nodo di testa della lista
+ * 
+ * @param list Lista da cui rimuovere la testa
+ * @return struct node* Nodo di testa della lista. Se c'è un errore restituisce NULL e setta errno.
+ */
+struct node* remove_head (pair_list_t* list);
+
 #endif // _LIST

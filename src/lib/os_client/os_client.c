@@ -18,7 +18,7 @@
 
 #include <socket/socket.h>
 
-#include <osclient/osclient.h>
+#include <os_client/os_client.h>
 
 #include <assertmacros.h>
 

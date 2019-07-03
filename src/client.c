@@ -8,7 +8,7 @@
 #include <assertmacros.h>
 
 #include <socket/socket.h>
-#include <osclient/osclient.h>
+#include <os_client/os_client.h>
 
 #include <shared.h>
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     // Si connette al server con il nome scelto
-    ASSERT_MESSAGE(os_connect(name) == 1, "Connecting to socket", return 1);
+    ASSERT_MESSAGE(os_connect(name) == 1, "Connecting to socket", free(name); return 1);
     printf("Connected with name %s\n", name);
     // Libera la memoria occupata dal nome
     free(name);
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
         success = delete_data();
     // Si disconnette
     ASSERT_MESSAGE(os_disconnect() == 1, "Leaving connection", return 1);
-    printf("Disconnesso\n");
+    printf("Disconnected\n");
     // Restituisce il successo dell'operazione performata
     return success;
 }

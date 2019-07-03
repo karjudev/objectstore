@@ -15,6 +15,7 @@
 
 #include <socket/socket.h>
 #include <workers/workers.h>
+#include <pthread_list/pthread_list.h>
 
 #include <shared.h>
 
@@ -200,7 +201,8 @@ int parse_request (int client_fd, char* header) {
  */
 void* connection_handler (void* ptr) {
     // File descriptor del client
-    int client_fd = *((int*) ptr);
+    int* client_ptr = (int*) ptr;
+    int client_fd = *(client_ptr);
     // Loop di gestione delle comunicazioni
     while (!terminated) {
         // Header del messaggio
@@ -222,9 +224,11 @@ void* connection_handler (void* ptr) {
         // Se parse_request restituisce 1 il messaggio è di terminazione
         if (result == 1) break;
     }
-    printf("Client %d terminated connection\n", client_fd);
+    // Libera la memoria occupata dal file descriptor
+    free(client_ptr);
     // Chiude la connessione
-    close_socket(client_fd);
+    ASSERT_MESSAGE_RETURN(close_socket(client_fd) == 0, "Closing socket", NULL);
+    printf("Client %d terminated connection\n", client_fd);
     return NULL;
 }
 
@@ -242,6 +246,8 @@ int main(int argc, char const *argv[]) {
     // Avvia il thread gestore dei segnali in modalità detached
     pthread_t sig_handler_id;
     ASSERT_MESSAGE(pthread_create(&sig_handler_id, NULL, signal_handler, (void*) &set) == 0, "Creating signal handling thread", exit(1));
+    // Crea la lista dei thread attivi
+    pthread_list_t* thread_list = NULL;
     // Crea il server socket su cui attendere connessioni
     int server_fd = create_server_socket(SOCKET_NAME);
     // Controlla che la creazione sia andata a buon fine oppure esce
@@ -262,12 +268,21 @@ int main(int argc, char const *argv[]) {
         ASSERT_MESSAGE(client_fd != -1, "Accepting client", exit(1));
         // Se è arrivato un nuovo client lo gestisce
         if (client_fd > 0) {
+            // Copia il file descriptor in una variabile da passare
+            int* client_ptr = malloc(sizeof(int));
+            *client_ptr = client_fd;
             // Crea un nuovo thread a cui passa la connessione
-            pthread_t thread;
-            pthread_create(&thread, NULL, connection_handler, (void*) &client_fd);
-            // Mette il thread in modalità detached
-            pthread_detach(thread);
+            pthread_t thread_id;
+            ASSERT_MESSAGE(pthread_create(&thread_id, NULL, connection_handler, (void*) client_ptr) == 0, "Creating thread", break);
+            // Mette il thread nella coda
+            ASSERT_MESSAGE(insert_pthread_list(&thread_list, thread_id) == 0, "Inserting thread in waiting list", break);
         }
+    }
+    // Attende la terminazione di tutti i thread
+    while (thread_list != NULL) {
+        pthread_t thread_id = remove_pthread_list_head(&thread_list);
+        ASSERT_MESSAGE(pthread_join(thread_id, NULL) == 0, "Joining thread", exit(1));
+        printf("Thread %ld stopped\n", thread_id);
     }
     // Libera la memoria occupata dalle funzioni worker
     ASSERT_MESSAGE(stop_worker_functions() != -1, "Stopping workers", exit(1));
