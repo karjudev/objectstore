@@ -25,7 +25,8 @@ pthread_t remove_pthread_list_head (pthread_list_t** head) {
     if (*head == NULL) return 0;
     // Rimuove la testa della lista
     pthread_list_t* old_head = *head;
-    (*head) = (*head)->next;
+    if ((*head)->next) (*head) = (*head)->next;
+    else (*head) = NULL;
     // Valore del thread id
     pthread_t thread_id = old_head->thread_id;
     // Libera il nodo

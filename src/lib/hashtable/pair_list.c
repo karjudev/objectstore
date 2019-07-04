@@ -44,19 +44,15 @@ static struct node* create_node (int key, char* value) {
  * 
  * @param head Testa della lista da eliminare
  */
-static void destroy_nodes (struct node** head) {
+static void destroy_nodes (struct node* head) {
     // Se la testa è NULL ha finito
-    if (*head == NULL) return;
+    if (head == NULL) return;
     // Distrugge tutti i nodi successivi
-    struct node* next = (*head)->next;
-    destroy_nodes(&next);
-    (*head)->next = NULL;
+    destroy_nodes(head->next);
     // Distrugge il valore del nodo corrente
-    free((*head)->value);
+    free(head->value);
     // Distrugge il nodo corrente
-    free(*head);
-    // Mette il nodo corrente a NULL
-    *head = NULL;
+    free(head);
 }
 
 /**
@@ -103,7 +99,7 @@ int destroy_list (pair_list_t* list) {
     // Controlla che la lista esista
     ASSERT_ERRNO_RETURN(list != NULL, EINVAL, -1);
     // Distrugge gli elementi della lista
-    destroy_nodes(&(list->head));
+    destroy_nodes(list->head);
     // Distrugge la struttura dati che contiene la lista
     free(list);
     // Restituisce il successo
@@ -123,7 +119,8 @@ char* get_value_list (pair_list_t* list, int key) {
     // Se la dimensione della coda è 0 non c'è niente da cercare
     ASSERT_ERRNO_RETURN(list->elements > 0, ENOKEY, NULL);
     // Cerca il nodo nella lista
-    struct node* found = get_node(list->head, key);
+    struct node* found = NULL;
+    if (list->head) found = get_node(list->head, key);
     // Se il nodo non è stato trovato non esiste
     ASSERT_ERRNO_RETURN(found != NULL, ENOKEY, NULL);
     // Restituisce il valore
@@ -177,13 +174,13 @@ char* remove_list (pair_list_t* list, int key) {
     struct node* found = get_node(list->head, key);
     ASSERT_RETURN(found != NULL, 0);
     // Prende il valore associato
-    char* value = found->value;
+    char* value = strdup(found->value);
     // Rimuove il nodo dalla coda
     if (found->prev) found->prev->next = found->next;
     if (found->next) found->next->prev = found->prev;
     found->prev = found->next = NULL;
     // Libera la memoria del nodo
-    destroy_nodes(&found);
+    destroy_nodes(found);
     // Decrementa il numero totale di nodi
     list->elements--;
     // Se non ci sono più nodi invalida il riferimento alla lista
