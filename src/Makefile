@@ -3,7 +3,7 @@ LIB = ./lib
 
 # Compilatore e relative opzioni
 CC = gcc -std=c99
-CFLAGS = -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB) \
+CFLAGS = -g -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB) \
 #-fsanitize=undefined -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer
 
 # Creatore di librerie e relative opzioni
@@ -29,6 +29,7 @@ testhash: testhash.c $(LIB)/libhashtable.a
 $(LIB)/libhashtable.a: $(LIB)/hashtable/hashtable.o $(LIB)/hashtable/pair_list.o
 	$(AR) $(ARFLAGS) $@ $^
 
+# Libreria per la gestione di una lista di pthread_t
 $(LIB)/libpthreadlist.a: $(LIB)/pthread_list/pthread_list.o
 	$(AR) $(ARFLAGS) $@ $^
 
@@ -48,20 +49,17 @@ $(LIB)/libworkers.a: $(LIB)/workers/workers.o
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Test valgrind del server
 test-server: objectstore
-	if [ -S ./tmp.sock ]; then rm ./tmp.sock; fi
-	#if [ -d ./data ]; then rm -rf ./data; fi
-	./objectstore
+	valgrind --leak-check=full --show-leak-kinds=all ./objectstore
 
-# Test valgrind del client
 test-client: client
-	./client ugo 1
-	./client ugo 2
-	./client ugo 3
+	for i in `seq 1 50`; do \
+		./client user$$i 1 & \
+	done
 
+# Target che avvia il test
 test: all
 	./test.sh
 
 clean:
-	rm -rf ./lib/*/*.o ./lib/*.a ./objectstore ./client ./testout.log
+	rm -rf ./data ./tmp.sock ./lib/*/*.o ./lib/*.a ./objectstore ./client ./testout.log
