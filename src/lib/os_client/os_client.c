@@ -27,12 +27,17 @@
 // File descriptor del client, variabile globlae della libreria
 static int server_fd = -1;
 
+static int parse_error (char* response) {
+    int errcode = -1;
+    sscanf(response, "KO %d \n", &errcode);
+    if (errcode <= 0) return 0;
+    errno = errcode;
+    return 1;
+}
+
 static int check_response (char* response) {
     if (EQUALS(response, "OK \n")) return 1;
-    int errcode = 0;
-    sscanf(response, "KO %d \n", &errcode);
-    errno = errcode;
-    return 0;
+    return parse_error(response);
 }
 
 static int send_header (char* format, char* name, size_t length) {
@@ -115,6 +120,9 @@ void* os_retrieve (char* name) {
     // Riceve il messaggio con l'header della risposta
     char* res_header = receive_message(server_fd, MAX_HEADER_LENGTH);
     ASSERT_RETURN(res_header != NULL, 0);
+    // Controlla che non sia stato restituito un errore
+    int is_error = parse_error(res_header);
+    ASSERT_RETURN(is_error == 0, 0);
     // Legge la dimensione dei dati in arrivo
     size_t size = 0;
     sscanf(res_header, "DATA %zu \n", &size);

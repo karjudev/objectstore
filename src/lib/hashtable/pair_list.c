@@ -32,7 +32,7 @@ static struct node* create_node (int key, char* value) {
     ASSERT_ERRNO_RETURN(new != NULL, ENOMEM, NULL);
     // Setta i dati del nodo
     new->key = key;
-    if (new->value != NULL) new->value = strdup(value);
+    new->value = strdup(value);
     // Setta i puntatori a NULL
     new->prev = new->next = NULL;
     // Restituisce il nodo
@@ -44,15 +44,18 @@ static struct node* create_node (int key, char* value) {
  * 
  * @param head Testa della lista da eliminare
  */
-static void destroy_nodes (struct node* head) {
+static void destroy_nodes (struct node** head) {
     // Se la testa è NULL ha finito
-    if (!head) return;
+    if (*head == NULL) return;
     // Distrugge tutti i nodi successivi
-    destroy_nodes(head->next);
+    struct node* next = (*head)->next;
+    destroy_nodes(&next);
     // Distrugge il valore del nodo corrente
-    free(head->value);
+    free((*head)->value);
     // Distrugge il nodo corrente
-    free(head);
+    free(*head);
+    // Mette il nodo corrente a NULL
+    *head = NULL;
 }
 
 /**
@@ -64,9 +67,11 @@ static void destroy_nodes (struct node* head) {
  */
 static struct node* get_node (struct node* head, int key) {
     // Se il nodo corrente è NULL Non ha trovato il nodo che cercava (è in fondo alla lista o la lista è vuota)
-    if (!head) return NULL;
+    if (head == NULL) return NULL;
     // Se il nodo corrente ha la stessa chiave della chiave cercata lo restituisce
     if (key == head->key) return head;
+    // Se non esiste un successore termina
+    if (head->next == NULL) return NULL;
     // Altrimenti restituisce il risultato della ricerca nei prossimi nodi
     return get_node(head->next, key);
 }
@@ -97,7 +102,7 @@ int destroy_list (pair_list_t* list) {
     // Controlla che la lista esista
     ASSERT_ERRNO_RETURN(list != NULL, EINVAL, -1);
     // Distrugge gli elementi della lista
-    destroy_nodes(list->head);
+    destroy_nodes(&(list->head));
     // Distrugge la struttura dati che contiene la lista
     free(list);
     // Restituisce il successo
@@ -113,7 +118,7 @@ int destroy_list (pair_list_t* list) {
  */
 char* get_value_list (pair_list_t* list, int key) {
     // Controlla che i parametri siano corretti
-    ASSERT_ERRNO_RETURN(key > -1, EINVAL, NULL);
+    ASSERT_ERRNO_RETURN((list != NULL) && (key >= 0), EINVAL, NULL);
     // Se la dimensione della coda è 0 non c'è niente da cercare
     ASSERT_ERRNO_RETURN(list->elements > 0, ENOKEY, NULL);
     // Cerca il nodo nella lista
@@ -134,7 +139,7 @@ char* get_value_list (pair_list_t* list, int key) {
  */
 int insert_list (pair_list_t* list, int key, char* value) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN(key > -1, EINVAL, -1);
+    ASSERT_ERRNO_RETURN((list != NULL) && (key > -1), EINVAL, -1);
     // Cerca, se esiste, il nodo corrispondente alla chiave che si vuole inserire
     if (list->elements > 0) {
         struct node* found = get_node(list->head, key);
@@ -164,7 +169,7 @@ int insert_list (pair_list_t* list, int key, char* value) {
  */
 char* remove_list (pair_list_t* list, int key) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN(key > -1, EINVAL, NULL);
+    ASSERT_ERRNO_RETURN((list != NULL) && (key > -1), EINVAL, NULL);
     // Se la dimensione è 0 non c'è niente da rimuovere
     ASSERT_ERRNO_RETURN(list->elements > 0, ENOKEY, NULL);
     // Cerca il nodo da rimuovere
@@ -177,29 +182,11 @@ char* remove_list (pair_list_t* list, int key) {
     if (found->next) found->next->prev = found->prev;
     found->prev = found->next = NULL;
     // Libera la memoria del nodo
-    destroy_nodes(found);
+    destroy_nodes(&found);
     // Decrementa il numero totale di nodi
     list->elements--;
     // Se non ci sono più nodi invalida il riferimento alla lista
     if (list->elements == 0) list->head = NULL;
     // Restituisce il valore associato a key nella lista
     return value;
-}
-
-/**
- * @brief Rimuove il nodo di testa della lista
- * 
- * @param list Lista da cui rimuovere la testa
- * @return struct node* Nodo di testa della lista. Se c'è un errore restituisce NULL e setta errno.
- */
-struct node* remove_head (pair_list_t* list) {
-    // Prende il nodo di testa
-    struct node* head = list->head;
-    // Modifica la testa della lista
-    if (head->next) list->head = head->next;
-    else list->head = NULL;
-    // Decrementa il numero di nodi complessivi
-    list->elements--;
-    // Restituisce il nodo
-    return head;
 }
