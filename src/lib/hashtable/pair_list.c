@@ -50,6 +50,7 @@ static void destroy_nodes (struct node** head) {
     // Distrugge tutti i nodi successivi
     struct node* next = (*head)->next;
     destroy_nodes(&next);
+    (*head)->next = NULL;
     // Distrugge il valore del nodo corrente
     free((*head)->value);
     // Distrugge il nodo corrente
