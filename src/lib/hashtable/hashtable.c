@@ -122,24 +122,24 @@ int insert_hashtable (hashtable_t* table, int key, char* value) {
  * 
  * @param table Tabella da cui rimuovere l'elemento
  * @param key Chiave che identifica l'elemento
- * @return char* Valore che era associato alla chiave. Se c'è un errore restituisce NULL e setta errno.
+ * @return int Se la rimozione è avvenuta con successo restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
-char* remove_hashtable (hashtable_t* table, int key) {
+int remove_hashtable (hashtable_t* table, int key) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((table != NULL) && (key > -1), EINVAL, NULL);
+    ASSERT_ERRNO_RETURN((table != NULL) && (key > -1), EINVAL, -1);
     // Calcola l'hash della chiave come indice della tabella
     int hash = hash_function(key);
     // Prende la lock associata all'elemento
     pthread_mutex_t mutex = mutexes[hash / MUTEX_NUMBER];
-    LOCK_ACQUIRE(&mutex, return NULL);
+    LOCK_ACQUIRE(&mutex, return -1);
     // Rimuove l'elemento nella lista
-    char* value = remove_list(table->entries[hash], key);
+    int success = remove_list(&(table->entries[hash]), key);
     // Decrementa il numero di elementi nella tabella
-    if (value != NULL) table->elements--;
+    if (success == 0) table->elements--;
     // Rilascia la lock associata all'elemento
-    LOCK_RELEASE(&mutex, return NULL);
+    LOCK_RELEASE(&mutex, return -1);
     // Restituisce il valore associato alla chiave nella lista
-    return value;
+    return success;
 }
 
 /**

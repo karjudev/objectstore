@@ -163,28 +163,27 @@ int insert_list (pair_list_t* list, int key, char* value) {
  * 
  * @param list Puntatore alla testa della lista
  * @param key Chiave che identifica la coppia
- * @return char* Valore che era associato a key nella lista. Se c'è un errore restituisce NULL e setta errno.
+ * @return int Se la rimozione è avvenuta con successo restituisce 0. Se c'è un errore restituisce NULL e setta errno.
  */
-char* remove_list (pair_list_t* list, int key) {
+int remove_list (pair_list_t** list, int key) {
     // Controlla la correttezza dei parametri
-    ASSERT_ERRNO_RETURN((list != NULL) && (key > -1), EINVAL, NULL);
+    ASSERT_ERRNO_RETURN(((*list) != NULL) && (key > -1), EINVAL, -1);
     // Se la dimensione è 0 non c'è niente da rimuovere
-    ASSERT_ERRNO_RETURN(list->elements > 0, ENOKEY, NULL);
+    ASSERT_ERRNO_RETURN((*list)->elements > 0, ENOKEY, -1);
     // Cerca il nodo da rimuovere
-    struct node* found = get_node(list->head, key);
+    struct node* found = get_node((*list)->head, key);
     ASSERT_RETURN(found != NULL, 0);
-    // Prende il valore associato
-    char* value = strdup(found->value);
     // Rimuove il nodo dalla coda
     if (found->prev) found->prev->next = found->next;
+    else (*list)->head = found->next;
     if (found->next) found->next->prev = found->prev;
     found->prev = found->next = NULL;
     // Libera la memoria del nodo
     destroy_nodes(found);
     // Decrementa il numero totale di nodi
-    list->elements--;
+    (*list)->elements--;
     // Se non ci sono più nodi invalida il riferimento alla lista
-    if (list->elements == 0) list->head = NULL;
-    // Restituisce il valore associato a key nella lista
-    return value;
+    if ((*list)->elements == 0) (*list)->head = NULL;
+    // Restituisce il successo dell'operazione
+    return 0;
 }

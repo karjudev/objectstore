@@ -66,9 +66,9 @@ int insert_list (pair_list_t* list, int key, char* value);
  * 
  * @param list Puntatore alla testa della lista
  * @param key Chiave che identifica la coppia
- * @return char* Valore che era associato a key nella lista. Se c'è un errore restituisce NULL e setta errno.
+ * @return int Se la rimozione è avvenuta con successo restituisce 0. Se c'è un errore restituisce NULL e setta errno.
  */
-char* remove_list (pair_list_t* list, int key);
+int remove_list (pair_list_t** list, int key);
 
 /**
  * @brief Rimuove il nodo di testa della lista
