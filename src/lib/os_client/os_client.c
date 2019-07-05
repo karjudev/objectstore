@@ -2,8 +2,6 @@
  * @file osclient.c
  * @author Giacomo Mariani, Matricola 545519, Corso B
  * @brief Implementazione della libreria di connessione al server object store.
- * @version 0.1
- * @date 2019-06-11
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 
@@ -27,6 +25,12 @@
 // File descriptor del client, variabile globlae della libreria
 static int server_fd = -1;
 
+/**
+ * @brief Riconosce un codice di errore nella stringa passata
+ * 
+ * @param response Stringa della forma "KO dd \n"
+ * @return int Se ha trovato un codice di errore restituisce 1 e setta errno con questo codice. Altrimenti restituisce 0.
+ */
 static int parse_error (char* response) {
     int errcode = -1;
     sscanf(response, "KO %d \n", &errcode);
@@ -35,28 +39,39 @@ static int parse_error (char* response) {
     return 1;
 }
 
+/**
+ * @brief Riconosce se un messaggio passato è una risposta di tipo "OK \n" oppure contiene un codice di errore
+ * 
+ * @param response Risposta da analizzare
+ * @return int Se la risposta è OK restituisce 1. Se invece è un errore restituisce 0 e setta errno pari a questo errore.
+ */
 static int check_response (char* response) {
     if (EQUALS(response, "OK \n")) return 1;
     return parse_error(response);
 }
 
+/**
+ * @brief Costruisce e invia un header a partire dal formato e gli argomenti passati
+ * 
+ * @param format Formato della stringa da inviare
+ * @param name Nome della risorsa da creare/manipolare
+ * @param length (Opzionale) Lunghezza della 
+ * @return int Se creazione e invio sono andate a buon fine restituisce 0. Se c'è stato un errore restituisce -1 e setta errno.
+ */
 static int send_header (char* format, char* name, size_t length) {
-    // Inizializza il buffer che contiene l'header
-    char* header = (char*) calloc(MAX_HEADER_LENGTH, sizeof(char));
-    ASSERT_ERRNO_RETURN(header != NULL, ENOMEM, -1);
+    // Buffer che contiene l'header
+    char header[MAX_HEADER_LENGTH];
     // Distingue il tipo di parametri passati e costruisce la stringa
     if (length != 0) sprintf(header, format, name, length);
     else sprintf(header, format, name);
     // Invia l'header
     int success = send_message(server_fd, header, MAX_HEADER_LENGTH);
-    // Libera la memoria occupata dall'header
-    free(header);
     // Restituisce il successo dell'operazione
     return success;
 }
 
 /**
- * @brief Inizializza la connessione globale con il server.
+ * @brief Inizializza la connessione con il server.
  * 
  * @param name Nome dell'utente da connettere
  * @return int 1 se la connessione è andata a buon fine. Se c'è un errore restituisce 0 e setta errno.
@@ -90,7 +105,7 @@ int os_store (char* name, void* block, size_t len) {
     ASSERT_ERRNO_RETURN((name != NULL) && (block != NULL) && (len > 0), EINVAL, 0);
     ASSERT_ERRNO_RETURN(server_fd > 0, ENOTCONN, -1);
     // Invia l'header
-    int success = send_header("STORE %s %ld \n", name, len);
+    int success = send_header("STORE %s %ld \n ", name, len);
     // Verifica che l'invio sia andato a buon fine
     ASSERT_RETURN(success != -1, 0);
     // Invia i dati

@@ -1,8 +1,7 @@
 /**
- * @file list.c
+ * @file pair_list.c
  * @author Giacomo Mariani, Matricola 545519, Corso B
  * @brief Implementazione della libreria di creazione e gestione di una lista concatenata di coppie (chiave, valore).
- * @version 0.1
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 

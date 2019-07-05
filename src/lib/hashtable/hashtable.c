@@ -1,8 +1,8 @@
 /**
- * @file hashtable.h
+ * @file hashtable.c
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Implementazione della libreria di creazione e gestione di una tabella hash di coppie (stringa, intero) memorizzata con liste di trabocco.
- * @version 0.1
+ * @brief Implementazione della libreria di creazione e gestione di una tabella hash di coppie (stringa, intero),
+ * memorizzata con liste di trabocco.
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 

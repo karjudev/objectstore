@@ -1,8 +1,7 @@
 /**
  * @file socket.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Strutture dati e metodi di aiuto alla comunicazione tra socket.
- * @version 0.1
+ * @brief Header della libreria di comunicazione su socket.
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 

@@ -1,7 +1,7 @@
 /**
- * @file socket.c
+ * @file socket.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Header della libreria che propone le funzioni di scrittura sicura su file descriptor.
+ * @brief Implementazione libreria che fornisce i metodi per la scrittura e la lettura di un dato numero di bytes.
  * @version 0.1
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.

@@ -3,11 +3,10 @@
  * @author Giacomo Mariani, Matricola 545519, Corso B
  * @brief Header della libreria di creazione e gestione di una tabella hash di coppie (intero, stringa) memorizzata con liste di trabocco.
  * La libreria usa 16 lock per partizionare la tabella e garantire l'accesso in mutua esclusione alla tabella.
- * @version 0.1
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 
- */#include <stdio.h>
+ */
 
 
 #if !defined(_HASHTABLE)

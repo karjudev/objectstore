@@ -1,7 +1,7 @@
 /**
  * @file mutexmacros.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Macro che servono a .
+ * @brief Macro che servono ad eseguire operazioni sulle mutex e, in caso di errore, eseguire operazioni.
  * @version 0.1
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.

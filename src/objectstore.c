@@ -1,3 +1,12 @@
+/**
+ * @file client.c
+ * @author Giacomo Mariani, Matricola 545519, Corso B
+ * @brief Implementazione del server object store.
+ * 
+ * Si dichiara che tutto il codice è stato realizzato dallo studente.
+ * 
+ */
+
 #define _POSIX_C_SOURCE 199506L
 
 #include <stdio.h>
@@ -20,7 +29,7 @@
 #include <shared.h>
 
 // Variabile globale che indica la terminazione
-int terminated = 0;
+static int terminated = 0;
 
 /**
  * @brief Invia al client il messaggio 'KO <errno>'
@@ -40,7 +49,7 @@ void send_error (int client_fd) {
 }
 
 /**
- * @brief Stampa un report sullo standard output
+ * @brief Stampa un report sullo standard output contenente client connessi, numero di oggetti e dimensione totale dello store
  */
 void print_report () {
     // Numero di client connessi
@@ -68,6 +77,13 @@ void send_ok (int client_fd) {
     ASSERT(success != -1, send_error(client_fd));
 }
 
+/**
+ * @brief Registra un utente sul server
+ * 
+ * @param client_fd File descriptor del server
+ * @param name Nome con cui registrarsi
+ * @return int Se la registrazione è avvenuta con successo invia OK all'utente e restitusice 0. Se c'è un errore restituisce -1 e setta errno.
+ */
 int handle_registration (int client_fd, char* name) {
     // Registra l'utente nel sistema
     int success = register_user(client_fd, name);
@@ -78,6 +94,13 @@ int handle_registration (int client_fd, char* name) {
     return 0;
 }
 
+/**
+ * @brief Rimuove dallo store un blocco
+ * 
+ * @param client_fd File descriptor del client
+ * @param name Nome del blocco da rimuovere
+ * @return int Se l'eliminazione è avvenuta con successo restituisce OK all'utente e restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ */
 int handle_deletion (int client_fd, char* name) {
     // Rimuove l'utente dal sistema
     int success = delete_block(client_fd, name);
@@ -88,6 +111,14 @@ int handle_deletion (int client_fd, char* name) {
     return 0;
 }
 
+/**
+ * @brief Memorizza un oggetto nello spazio dell'utente
+ * 
+ * @param client_fd File descriptor del client
+ * @param name Nome dell'oggetto da memorizzare
+ * @param length Dimensione dell'oggetto
+ * @return int Se la memorizzazione è avvenuta con successo manda OK al client e restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ */
 int handle_storing (int client_fd, char* name, size_t length) {
     // Legge i dati
     void* data = receive_message(client_fd, length);
@@ -101,6 +132,13 @@ int handle_storing (int client_fd, char* name, size_t length) {
     return 0;
 }
 
+/**
+ * @brief Recupera un blocco di dati dell'utente identificato dal nome
+ * 
+ * @param client_fd File descriptor dell'utente
+ * @param name Nome del blocco da reperire
+ * @return int Se l'oggetto è stato ritrovato con successo invia OK al client e restituisce 0. Se c'è un errore restituisce -1 e setta errno.
+ */
 int handle_retrieving (int client_fd, char* name) {
     // Alloca l'header del messaggio
     char header[MAX_HEADER_LENGTH];
@@ -121,11 +159,19 @@ int handle_retrieving (int client_fd, char* name) {
     return 0;
 }
 
+/**
+ * @brief Termina la connessione con un client
+ * 
+ * @param client_fd File descriptor del client
+ * @return int Se la terminazione è avvenuta con successo restituisce 1, altrimenti restituisce -1 e setta errno.
+ */
 int handle_leaving (int client_fd) {
     // Elimina l'utente dal sistema
     leave_client(client_fd);
+    // Chiude il file descriptor del client
+    int success = close_socket(client_fd);
     // Restituisce il flag 1 che indica la terminazione della connessione
-    return 1;
+    return success;
 }
 
 /**
@@ -193,7 +239,7 @@ int parse_request (int client_fd, char* header) {
 }
 
 /**
- * @brief Legge un header dal client ed avvia la procedura associata.
+ * @brief Legge un header dal client ed avvia la procedura associata. Se una delle procedure restituisce un errore lo invia al client.
  * 
  * @param ptr Puntatore != -1al file descriptor del client
  * @return void* Sempre NULL dato che la funzione non restituisce nulla

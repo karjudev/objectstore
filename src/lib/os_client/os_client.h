@@ -2,8 +2,6 @@
  * @file osclient.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
  * @brief Header file della libreria di connessione al server object store.
- * @version 0.1
- * @date 2019-06-11
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 
@@ -13,7 +11,7 @@
 #define _CLIENT
 
 /**
- * @brief Inizializza la connessione globale con il server.
+ * @brief Inizializza la connessione con il server.
  * 
  * @param name Nome dell'utente da connettere
  * @return int 1 se la connessione è andata a buon fine. Se c'è un errore restituisce 0 e setta errno.

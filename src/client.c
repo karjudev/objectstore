@@ -1,3 +1,12 @@
+/**
+ * @file client.c
+ * @author Giacomo Mariani, Matricola 545519, Corso B
+ * @brief Implementazione del client che comunica con l'object store.
+ * 
+ * Si dichiara che tutto il codice è stato realizzato dallo studente.
+ * 
+ */
+
 #define _DEFAULT_SOURCE
 
 #include <stdio.h>
@@ -165,9 +174,7 @@ int main(int argc, char *argv[]) {
     // Se l'operazione si è conclusa con successo lo stampa
     if (!error)
         printf("[%s] Test %d: Success\n", name, test_number);
-    else {
-        fprintf(stderr, "[%s] Test %d: %s\n", name, test_number, strerror(error));
-    }
+    else fprintf(stderr, "[%s] Test %d: %s\n", name, test_number, strerror(error));
     // Libera la memoria occupata dal nome
     free(name);
     // Si disconnette

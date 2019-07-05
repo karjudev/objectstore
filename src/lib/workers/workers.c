@@ -1,3 +1,13 @@
+/**
+ * @file workers.c
+ * @author Giacomo Mariani, Matricola 545519, Corso B
+ * @brief Implementazione delle funzioni che si interfacciano con file system e tabella hash.
+ * 
+ * Si dichiara che tutto il codice è stato realizzato dallo studente.
+ * 
+ */
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -25,6 +35,12 @@ static int objects_count;
 // Dimensione totale dello store
 static size_t total_size;
 
+/**
+ * @brief Restituisce la dimensione del file dal nome passato
+ * 
+ * @param file_name Nome del file di cui controllare la dimensione
+ * @return size_t Se la dimensione è stata ottenuta con successo la restituisce. Se c'è un errore restituisce -1 e setta errno.
+ */
 static size_t get_file_size (char* file_name) {
     struct stat sb = {0};
     int success = stat(file_name, &sb);
@@ -33,10 +49,10 @@ static size_t get_file_size (char* file_name) {
 }
 
 /**
- * @brief Se la cartella esiste la cancella, poi la ricrea
+ * @brief Se non esiste una cartella dal nome passato, la crea.
  * 
- * @param name 
- * @return int 
+ * @param name Nome della cartella
+ * @return int Se la cartella esiste già oppure è stata creata con successo restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
 static int create_directory_if_not_exists (char* name) {
     struct stat sb = {0};

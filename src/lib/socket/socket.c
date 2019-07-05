@@ -1,16 +1,13 @@
 /**
  * @file socket.c
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Implementazione dei metodi di aiuto alla comunicazione tra socket.
- * @version 0.1
- * @date 2019-06-11
+ * @brief Implementazione dei metodi di comunicazione tra socket.
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 
@@ -25,6 +22,7 @@
 #include <socket/socket.h>
 #include <assertmacros.h>
 
+// Dimensione massima di un path in UNIX
 #define UNIX_PATH_MAX 108
 
 /**

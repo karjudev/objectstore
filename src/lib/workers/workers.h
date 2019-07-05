@@ -1,8 +1,7 @@
 /**
  * @file workers.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
- * @brief Header delle funzioni che svolgono il lavoro del server.
- * @version 0.1
+ * @brief Header delle funzioni che si interfacciano con file system e tabella hash.
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 

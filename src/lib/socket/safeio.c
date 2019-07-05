@@ -1,3 +1,12 @@
+/**
+ * @file safeio.c
+ * @author Giacomo Mariani, Matricola 545519, Corso B
+ * @brief Implementazione libreria che fornisce i metodi per la scrittura e la lettura di un dato numero di bytes.
+ * 
+ * Si dichiara che tutto il codice è stato realizzato dallo studente.
+ * 
+ */
+
 #include <unistd.h>
 #include <errno.h>
 

@@ -2,7 +2,6 @@
  * @file pair_list.h
  * @author Giacomo Mariani, Matricola 545519, Corso B
  * @brief Header della libreria di creazione e gestione di una lista concatenata di coppie (chiave, valore) di tipo (intero, stringa).
- * @version 0.1
  * 
  * Si dichiara che tutto il codice è stato realizzato dallo studente.
  * 
