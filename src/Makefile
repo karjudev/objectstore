@@ -49,11 +49,6 @@ $(LIB)/libworkers.a: $(LIB)/workers/workers.o
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-test-client: client
-	for i in `seq 1 50`; do \
-		./client user$$i 1 & \
-	done
-
 # Target che avvia il server e lo script di test
 test: all
 	./objectstore &

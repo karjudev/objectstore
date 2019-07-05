@@ -29,15 +29,14 @@ int terminated = 0;
  */
 void send_error (int client_fd) {
     // Inizializza il buffer che contiene l'errore
-    char* err_buffer = (char*) calloc(MAX_HEADER_LENGTH, sizeof(char));
-    ASSERT_MESSAGE(err_buffer != NULL, "Allocating buffer for error", return);
+    char err_buffer[MAX_HEADER_LENGTH];
     // Costruisce la stringa formattata
     sprintf(err_buffer, "KO %d \n", errno);
     // Scrive la stringa sul buffer
     int success = send_message(client_fd, err_buffer, MAX_HEADER_LENGTH);
     ASSERT_MESSAGE(success != -1, "Writing error message to client", return);
-    // Libera il buffer
-    free(err_buffer);
+    // Stampa il messaggio anche sullo standard error
+    fprintf(stderr, "[objectstore] Client %d: %s\n", client_fd, strerror(errno));
 }
 
 /**
@@ -54,7 +53,7 @@ void print_report () {
     int success = get_report(&clients, &objects, &size);
     ASSERT_MESSAGE(success != -1, "Retrieving client", return);
     // Stampa le informazioni
-    printf("[REPORT] Connected clients: %d Object number: %d Total size: %d bytes\n", clients, objects, size);
+    printf("[objectstore] Connected clients: %d Object number: %d Total size: %d bytes\n", clients, objects, size);
 }
 
 /**
@@ -104,16 +103,14 @@ int handle_storing (int client_fd, char* name, size_t length) {
 
 int handle_retrieving (int client_fd, char* name) {
     // Alloca l'header del messaggio
-    char* header = (char*) calloc(MAX_HEADER_LENGTH, sizeof(char));
-    ASSERT_RETURN(header != NULL, -1);
+    char header[MAX_HEADER_LENGTH];
     // Recupera il blocco
     size_t size;
     void* block = retrieve_block(client_fd, name, &size);
-    ASSERT(block != NULL, free(header); return -1);
+    ASSERT_RETURN(block != NULL, -1);
     // Costruisce e invia l'header
     sprintf(header, "DATA %zu \n", size);
     int success = send_message(client_fd, header, sizeof(char) * MAX_HEADER_LENGTH);
-    free(header);
     ASSERT_RETURN(success != -1, -1);
     // Invia il blocco
     success = send_message(client_fd, block, size);
@@ -138,8 +135,10 @@ int handle_leaving (int client_fd) {
  * @return void* NULL perché il thread viene avviato come detached
  */
 void* signal_handler (void* ptr) {
-    // Crea una maschera per SIGINT e SIGUSR1
+    // Set di segnali da aspettare
     sigset_t set = *((sigset_t*) ptr);
+    // Stampa un messaggio di log
+    printf("[objectstore] Signal handling thread started and waiting for signals\n");
     // Entra nel loop di attesa dei segnali
     int signal;
     while (!terminated) {
@@ -151,6 +150,7 @@ void* signal_handler (void* ptr) {
         else if (signal == SIGUSR1)
             print_report();
     }
+    printf("[objectstore] Signal handling thread stopped\n");
     return NULL;
 }
 
@@ -207,10 +207,9 @@ void* connection_handler (void* ptr) {
         // Header del messaggio
         char* header = receive_message(client_fd, sizeof(char) * MAX_HEADER_LENGTH);
         // Se non ci riesce la pipe è stata interrotta, quindi esce
-        if (!header) {
-            free(header);
-            break;
-        }
+        if (!header) break;
+        // Altrimenti stampa un messaggio di log
+        printf("[objectstore] Client %d: %s", client_fd, header);
         // Avvia la gestione della richiesta
         int result = parse_request(client_fd, header);
         // Libera la memoria occupata dall'header
@@ -223,42 +222,47 @@ void* connection_handler (void* ptr) {
     // Libera la memoria occupata dal file descriptor
     free(client_ptr);
     // Chiude la connessione
-    ASSERT_MESSAGE_RETURN(close_socket(client_fd) == 0, "Closing socket", NULL);
+    ASSERT_MESSAGE_RETURN(close_socket(client_fd) == 0, "[objectstore] Closing socket", NULL);
+    // Stampa un messaggio di uscita
+    printf("[objectstore] Client %d: Connection terminated\n", client_fd);
+    // Chiude il thread
     return NULL;
 }
 
 int main(int argc, char const *argv[]) {
     // Crea una maschera per mascherare i segnali che intende gestire
     sigset_t set;
-    ASSERT_MESSAGE(sigemptyset(&set) != -1, "Emptying signal mask", exit(1));
-    ASSERT_MESSAGE(sigaddset(&set, SIGPIPE) != -1, "Adding SIGPIPE to mask", exit(1));
-    ASSERT_MESSAGE(sigaddset(&set, SIGINT) != -1, "Adding SIGINT to mask", exit(1));
-    ASSERT_MESSAGE(sigaddset(&set, SIGTERM) != -1, "Adding SIGTERM to mask", exit(1));
-    ASSERT_MESSAGE(sigaddset(&set, SIGQUIT) != -1, "Adding SIGQUIT to mask", exit(1));
-    ASSERT_MESSAGE(sigaddset(&set, SIGUSR1) != -1, "Adding SIGUSR1 to mask", exit(1));
+    ASSERT_MESSAGE(sigemptyset(&set) != -1, "[objectstore] Emptying signal mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGPIPE) != -1, "[objectstore] Adding SIGPIPE to mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGINT) != -1, "[objectstore] Adding SIGINT to mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGTERM) != -1, "[objectstore] Adding SIGTERM to mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGQUIT) != -1, "[objectstore] Adding SIGQUIT to mask", exit(1));
+    ASSERT_MESSAGE(sigaddset(&set, SIGUSR1) != -1, "[objectstore] Adding SIGUSR1 to mask", exit(1));
     // Maschera questi segnali per tutti i thread
-    ASSERT_MESSAGE(pthread_sigmask(SIG_SETMASK, &set, NULL) == 0, "Applying signal mask", exit(1));
+    ASSERT_MESSAGE(pthread_sigmask(SIG_SETMASK, &set, NULL) == 0, "[objectstore] Applying signal mask", exit(1));
     // Avvia il thread gestore dei segnali in modalità detached
     pthread_t sig_handler_id;
-    ASSERT_MESSAGE(pthread_create(&sig_handler_id, NULL, signal_handler, (void*) &set) == 0, "Creating signal handling thread", exit(1));
+    ASSERT_MESSAGE(pthread_create(&sig_handler_id, NULL, signal_handler, (void*) &set) == 0, "[objectstore] Creating signal handling thread", exit(1));
     // Crea la lista dei thread attivi
     pthread_list_t* thread_list = NULL;
     // Crea il server socket su cui attendere connessioni
     int server_fd = create_server_socket(SOCKET_NAME);
     // Controlla che la creazione sia andata a buon fine oppure esce
-    ASSERT_MESSAGE(server_fd != -1, "Creating server socket", exit(1));
+    ASSERT_MESSAGE(server_fd != -1, "[objectstore] Creating server socket", exit(1));
     // Inizializza le funzioni worker
     int success = init_worker_functions();
-    ASSERT_MESSAGE(success != -1, "Initializing workers", exit(1));
+    ASSERT_MESSAGE(success != -1, "[objectstore] Initializing data structures for work", exit(1));
     // Crea il file descriptor set per accettare nuove connessioni
     fd_set fset = create_fd_set(server_fd);
     // Crea il timeout per far attendere il selettore
     struct timeval timeout = {1, 0};
+    // Stampa un messaggio di log
+    printf("[objectstore] Started on socket %s (file descriptor %d) and waiting for connections...\n", SOCKET_NAME, server_fd);
     // Loop in cui attende nuove connessioni
     while (!terminated) {
         // Attende una nuova connessione
         int client_fd = accept_new_client(server_fd, fset, timeout);
-        ASSERT_MESSAGE(client_fd != -1, "Accepting client", exit(1));
+        ASSERT_MESSAGE(client_fd != -1, "[objectstore] Accepting client", exit(1));
         // Se è arrivato un nuovo client lo gestisce
         if (client_fd > 0) {
             // Copia il file descriptor in una variabile da passare
@@ -266,20 +270,23 @@ int main(int argc, char const *argv[]) {
             *client_ptr = client_fd;
             // Crea un nuovo thread a cui passa la connessione
             pthread_t thread_id;
-            ASSERT_MESSAGE(pthread_create(&thread_id, NULL, connection_handler, (void*) client_ptr) == 0, "Creating thread", break);
+            ASSERT_MESSAGE(pthread_create(&thread_id, NULL, connection_handler, (void*) client_ptr) == 0, "[objectstore] Creating thread", break);
             // Mette il thread nella coda
-            ASSERT_MESSAGE(insert_pthread_list(&thread_list, thread_id) == 0, "Inserting thread in waiting list", break);
+            ASSERT_MESSAGE(insert_pthread_list(&thread_list, thread_id) == 0, "[objectstore] Inserting thread in waiting list", break);
         }
     }
     // Attende la terminazione di tutti i thread
     while (thread_list != NULL) {
         pthread_t thread_id = remove_pthread_list_head(&thread_list);
-        ASSERT_MESSAGE(pthread_join(thread_id, NULL) == 0, "Joining thread", exit(1));
+        ASSERT_MESSAGE(pthread_join(thread_id, NULL) == 0, "[objectstore] Joining thread", exit(1));
+        printf("[objectstore] Thread %ld terminated\n", thread_id);
     }
     // Libera la memoria occupata dalle funzioni worker
-    ASSERT_MESSAGE(stop_worker_functions() != -1, "Stopping workers", exit(1));
+    ASSERT_MESSAGE(stop_worker_functions() != -1, "[objectstore] Stopping worker function", exit(1));
     // Chiude il socket del server, altrimenti stampa un messaggio
-    ASSERT_MESSAGE(pthread_join(sig_handler_id, NULL) == 0, "Joining signal handling socket", exit(1));
-    ASSERT_MESSAGE(close_server_socket(server_fd, SOCKET_NAME) != -1, "Closing socket", exit(1));
+    ASSERT_MESSAGE(pthread_join(sig_handler_id, NULL) == 0, "[objectstore] Joining signal handling socket", exit(1));
+    ASSERT_MESSAGE(close_server_socket(server_fd, SOCKET_NAME) != -1, "[objectstore] Closing socket", exit(1));
+    // Stampa il messaggio di uscita
+    printf("[objectstore] Server stopped\n");
     return 0;
 }
