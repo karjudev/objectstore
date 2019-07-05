@@ -3,7 +3,7 @@ LIB = ./lib
 
 # Compilatore e relative opzioni
 CC = gcc -std=c99
-CFLAGS = -g -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB) \
+CFLAGS = -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB) \
 #-fsanitize=undefined -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer
 
 # Creatore di librerie e relative opzioni
@@ -49,17 +49,16 @@ $(LIB)/libworkers.a: $(LIB)/workers/workers.o
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-test-server: objectstore
-	valgrind --leak-check=full --show-leak-kinds=all ./objectstore
-
 test-client: client
 	for i in `seq 1 50`; do \
 		./client user$$i 1 & \
 	done
 
-# Target che avvia il test
+# Target che avvia il server e lo script di test
 test: all
+	./objectstore &
 	./test.sh
+	./testsum.sh
 
 clean:
 	rm -rf ./data ./tmp.sock ./lib/*/*.o ./lib/*.a ./objectstore ./client ./testout.log

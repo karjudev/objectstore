@@ -154,7 +154,7 @@ int store_block (int client_fd, char* name, void* data, size_t size) {
  * 
  * @param client_fd File descriptor del client
  * @param name Nome del blocco da recuperare
- * @param size_ptr Puntatore alla dimensione del blocco, il cui valore puntato viene settato dalla funzione
+ * @param size_ptr Puntatore alla dimensione del blocco, il cui valore puntato viene settato al termine della funzione
  * @return void* Blocco di dati identificato dal nome. Se c'è un errore restituisce NULL e setta errno.
  */
 void* retrieve_block (int client_fd, char* name, size_t* size_ptr) {
