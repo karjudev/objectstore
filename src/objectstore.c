@@ -163,15 +163,13 @@ int handle_retrieving (int client_fd, char* name) {
  * @brief Termina la connessione con un client
  * 
  * @param client_fd File descriptor del client
- * @return int Se la terminazione è avvenuta con successo restituisce 1, altrimenti restituisce -1 e setta errno.
+ * @return int 1.
  */
 int handle_leaving (int client_fd) {
     // Elimina l'utente dal sistema
     leave_client(client_fd);
-    // Chiude il file descriptor del client
-    int success = close_socket(client_fd);
     // Restituisce il flag 1 che indica la terminazione della connessione
-    return success;
+    return 1;
 }
 
 /**
