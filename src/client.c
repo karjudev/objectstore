@@ -86,14 +86,14 @@ static int store_data () {
  * @param name Nome del blocco da reperire dal server
  * @param array Array di bytes per il confronto
  * @param size Dimensione dei dati da confrontare
- * @return int Se i due array sono uguali restituisce 0. Se c'è un errore restituisce un codice di errore.
+ * @return int Se i due array sono uguali restituisce 0. Se c'è un errore restituisce -1.
  */
 static int compare_data (char* name, byte* array, int size) {
     // Richiede i dati al server
     byte* data = os_retrieve(name);
     ASSERT(data != NULL, free(data); return 1);
     // Verifica che i dati siano uguali
-    ASSERT(data_corresponding(data, array, size), free(data); return EIO);
+    ASSERT(data_corresponding(data, array, size), free(data); return -1);
     // Libera la memoria occupata dai dati appena ricevuti
     free(data);
     // Stampa un messaggio di log
@@ -103,7 +103,7 @@ static int compare_data (char* name, byte* array, int size) {
 /**
  * @brief Recupera 20 blocchi di dati da 100B a 100KB e verifica che siano una sequenza di interi consecutivi
  * 
- * @return Se l'operazione è andata a buon fine restituisce 0. Se c'è un errore restituisce 1 e setta errno.
+ * @return Se l'operazione è andata a buon fine restituisce 0. Se c'è un errore restituisce un codice di errore.
  */
 static int retrieve_data () {
     // Byte array di prova
@@ -115,13 +115,13 @@ static int retrieve_data () {
     // Dimensione della risorsa
     int size = 100;
     for (int i = 0; i < 19; i++) {
-        ASSERT(compare_data(name, array, size) == 0, free(array); return errno);
+        ASSERT(compare_data(name, array, size) == 0, free(array); return EIO);
         // Incrementa la dimensione del prossimo blocco
         size += step;
         // Cambia il nome del prossimo blocco
         name[0]++;
     }
-    ASSERT_RETURN(compare_data(name, array, 100000) == 0, 1);
+    ASSERT(compare_data(name, array, 100000) == 0, free(array); return EIO);
     // Libera la memoria occupata dall'array di prova
     free(array);
     
