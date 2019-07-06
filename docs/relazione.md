@@ -5,13 +5,13 @@ Il progetto consta di due eseguibili `objstore` e `client`. Per avviare il test 
 ```
 $ make test
 ```
-In questo modo verrà avviato il server, dopodiché sarà avviato lo script `test.sh` e infine, al termine del primo script, sarà avviato `testsum.sh`, che raccoglie e analizza i dati di test.
+In questo modo verrà avviato il server, dopodiché sarà avviato lo script `test.sh` e infine, al termine del primo script, sarà avviato `testsum.sh`, che raccoglie e analizza i dati di test, invia il segnale di stampa delle statistiche e infine termina il server.
 
 ## Scelte implementative
 
 ### Messaggi di errore
 
-Dato che tutte le funzioni che ho scritto sia nel server che nel client, quando qualcosa va storto settano opportunamente la variabile `errno`, per favorire la brevità e per fare in modo che i messaggi abbiano dimensione fissa. Il client interpreta questo intero e stampa il messaggio associato ad esso sullo standard error usando la funzione `strerror`.
+Dato che tutte le funzioni che ho scritto sia nel server che nel client, in caso di errore settano opportunamente la variabile `errno`, per favorire la brevità e per fare in modo che i messaggi abbiano dimensione fissa. Il client interpreta questo intero e stampa il messaggio associato ad esso sullo standard error usando la funzione `strerror`.
 
 ### Protocollo di comunicazione
 
@@ -27,11 +27,11 @@ In modo analogo è calcolato il numero di bytes restituiti nella risposta:
 - Codice di errore a 2 cifre: 2
 - 2 spazi + `\n\0`: 4
 
-Questi "magic values" sono contenuti insieme a tutti i valori che devono essere condivisi tra client e server, in `lib/shared.h`.
+Questi "magic values" sono contenuti insieme a tutti i valori condivisi tra client e server, in `lib/shared.h`.
 
 ### Dati di prova
 
-Come blocchi di dati di prova, il client invia al server una serie di array di byte (`unsigned char`) contenenti numeri progressivi `0, 1, 2, ...`. I dati mandati dal client sono 20 pacchetti di dimensione crescente da 10 a 100000 bytes, che il client spedisce creando una volta per tutte un array di 100000 bytes come sopra, poi inviando pezzi dell'array di dimensione crescente.
+Come blocchi di dati di prova, il client invia al server una serie di array di byte (`unsigned char`) contenenti numeri progressivi `0, 1, 2, ...`. I dati mandati dal client sono 20 pacchetti di dimensione crescente da 10 a 100000 byte, che il client spedisce creando localmente una volta per tutte un array di 100000 byte definito come sopra, e inviando pezzi dell'array di dimensione crescente.
 
 ### Tabella hash
 
@@ -41,7 +41,7 @@ Invece di utilizzare la tabella fornita ho scelto di implementare da zero una ta
 
 ### Lista di thread
 
-Oltre alla lista di coppie è presente anche una libreria `pthread_list`, che permette di inserire e rimuovere `pthread_t` dalla testa di una lista concatenata. Una `pthread_list` viene usata dal server per tenere traccia dei thread creati dallo stesso, e alla fine dell'esecuzione viene distrutta man mano che i thread corrispondenti agli identificativi vengono terminati con una `pthread_join`.
+Oltre alla lista di coppie è presente anche una libreria `pthread_list`, che permette di inserire e rimuovere `pthread_t` dalla testa di una lista concatenata. La libreria viene usata dal server per tenere traccia dei thread creati dallo stesso, e alla fine dell'esecuzione viene distrutta man mano che i thread corrispondenti agli identificativi vengono terminati con una `pthread_join`.
 
 ## Struttura del codice
 
