@@ -61,6 +61,7 @@ static int check_response (char* response) {
 static int send_header (char* format, char* name, size_t length) {
     // Buffer che contiene l'header
     char header[MAX_HEADER_LENGTH];
+    memset(header, 0, MAX_HEADER_LENGTH);
     // Distingue il tipo di parametri passati e costruisce la stringa
     if (length != 0) sprintf(header, format, name, length);
     else sprintf(header, format, name);
@@ -131,19 +132,19 @@ void* os_retrieve (char* name) {
     ASSERT_ERRNO_RETURN(name != NULL, EINVAL, NULL);
     // Invia l'header
     int success = send_header("RETRIEVE %s \n", name, 0);
-    ASSERT_RETURN(success != -1, 0);
+    ASSERT_RETURN(success != -1, NULL);
     // Riceve il messaggio con l'header della risposta
-    char* res_header = receive_message(server_fd, sizeof(char) * MAX_RESPONSE_LENGTH);
-    ASSERT_RETURN(res_header != NULL, 0);
+    char* res_header = receive_message(server_fd, sizeof(char) * MAX_DATA_LENGTH);
+    ASSERT_RETURN(res_header != NULL, NULL);
     // Controlla che non sia stato restituito un errore
     int is_error = parse_error(res_header);
-    ASSERT_RETURN(is_error == 0, 0);
+    ASSERT(is_error == 0, free(res_header); return NULL);
     // Legge la dimensione dei dati in arrivo
     size_t size = 0;
     sscanf(res_header, "DATA %zu \n", &size);
     free(res_header);
     // Se l'header non è arrivato con successo esce
-    ASSERT_ERRNO_RETURN(size > 0, EINVAL, 0);
+    ASSERT_RETURN(size > 0, NULL);
     // Riceve effettivamente i dati
     void* data = receive_message(server_fd, size);
     ASSERT_RETURN(data != NULL, 0);

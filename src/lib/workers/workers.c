@@ -44,7 +44,7 @@ static size_t total_size;
 static size_t get_file_size (char* file_name) {
     struct stat sb = {0};
     int success = stat(file_name, &sb);
-    ASSERT_RETURN(success != -1, -1);
+    ASSERT_ERRNO_RETURN(success != -1, ENOENT, -1);
     return sb.st_size;
 }
 

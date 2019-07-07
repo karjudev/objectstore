@@ -93,7 +93,8 @@ static int compare_data (char* name, byte* array, int size) {
     byte* data = os_retrieve(name);
     ASSERT(data != NULL, free(data); return 1);
     // Verifica che i dati siano uguali
-    ASSERT(data_corresponding(data, array, size), free(data); return -1);
+    int equals = data_corresponding(data, array, size);
+    ASSERT(equals == 1, free(data); return -1);
     // Libera la memoria occupata dai dati appena ricevuti
     free(data);
     // Stampa un messaggio di log
@@ -115,13 +116,13 @@ static int retrieve_data () {
     // Dimensione della risorsa
     int size = 100;
     for (int i = 0; i < 19; i++) {
-        ASSERT(compare_data(name, array, size) == 0, free(array); return EIO);
+        ASSERT(compare_data(name, array, size) == 0, free(array); return errno);
         // Incrementa la dimensione del prossimo blocco
         size += step;
         // Cambia il nome del prossimo blocco
         name[0]++;
     }
-    ASSERT(compare_data(name, array, 100000) == 0, free(array); return EIO);
+    ASSERT(compare_data(name, array, 100000) == 0, free(array); return errno);
     // Libera la memoria occupata dall'array di prova
     free(array);
     
@@ -162,7 +163,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     // Si connette al server con il nome scelto
-    ASSERT(os_connect(name) == 1, free(name); return 1);
+    ASSERT(os_connect(name) == 1, fprintf(stderr, "[%s] Connecting to client: %s\n", name, strerror(errno)); free(name); return 1);
     // Distingue il tipo di test
     int error = 0;
     if (test_number == 1)
