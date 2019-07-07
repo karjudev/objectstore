@@ -65,7 +65,7 @@ static int send_header (char* format, char* name, size_t length) {
     if (length != 0) sprintf(header, format, name, length);
     else sprintf(header, format, name);
     // Invia l'header
-    int success = send_message(server_fd, header, MAX_HEADER_LENGTH);
+    int success = send_message(server_fd, header, sizeof(char) * MAX_HEADER_LENGTH);
     // Restituisce il successo dell'operazione
     return success;
 }
@@ -84,7 +84,7 @@ int os_connect (char* name) {
     int success = send_header("REGISTER %s \n", name, 0);
     ASSERT_RETURN(success != -1, 0);
     // Riceve la risposta
-    char* response = receive_message(server_fd, MAX_HEADER_LENGTH);
+    char* response = receive_message(server_fd, sizeof(char) * MAX_RESPONSE_LENGTH);
     ASSERT(response != NULL, free(response); return 0);
     // Restituisce il valore della risposta
     success = check_response(response);
@@ -112,7 +112,7 @@ int os_store (char* name, void* block, size_t len) {
     success = send_message(server_fd, block, len);
     ASSERT_RETURN(success != -1, 0);
     // Riceve la risposta
-    char* response = receive_message(server_fd, MAX_HEADER_LENGTH);
+    char* response = receive_message(server_fd, sizeof(char) * MAX_RESPONSE_LENGTH);
     ASSERT(response != NULL, free(response); return 0);
     // Restituisce il valore della risposta
     success = check_response(response);
@@ -133,7 +133,7 @@ void* os_retrieve (char* name) {
     int success = send_header("RETRIEVE %s \n", name, 0);
     ASSERT_RETURN(success != -1, 0);
     // Riceve il messaggio con l'header della risposta
-    char* res_header = receive_message(server_fd, MAX_HEADER_LENGTH);
+    char* res_header = receive_message(server_fd, sizeof(char) * MAX_RESPONSE_LENGTH);
     ASSERT_RETURN(res_header != NULL, 0);
     // Controlla che non sia stato restituito un errore
     int is_error = parse_error(res_header);
@@ -162,7 +162,7 @@ int os_delete (char* name) {
     int success = send_header("DELETE %s \n", name, 0);
     ASSERT_RETURN(success != -1, 0);
     // Attende la risposta
-    char* response = receive_message(server_fd, MAX_HEADER_LENGTH);
+    char* response = receive_message(server_fd, sizeof(char) * MAX_RESPONSE_LENGTH);
     // Verifica che sia un ok
     success = check_response(response);
     free(response);
@@ -177,7 +177,7 @@ int os_delete (char* name) {
 int os_disconnect() {
     // Invia al server il comando di leave
     char leave_string[MAX_HEADER_LENGTH] = "LEAVE \n";
-    int success = send_message(server_fd, leave_string, MAX_HEADER_LENGTH);
+    int success = send_message(server_fd, leave_string, sizeof(char) * MAX_HEADER_LENGTH);
     ASSERT_RETURN(success != 1, 0);
     // Chiude la connessione al socket
     success = close_socket(server_fd);

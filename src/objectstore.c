@@ -38,11 +38,11 @@ static int terminated = 0;
  */
 void send_error (int client_fd) {
     // Inizializza il buffer che contiene l'errore
-    char err_buffer[MAX_HEADER_LENGTH];
+    char err_buffer[MAX_RESPONSE_LENGTH];
     // Costruisce la stringa formattata
     sprintf(err_buffer, "KO %d \n", errno);
     // Scrive la stringa sul buffer
-    int success = send_message(client_fd, err_buffer, MAX_HEADER_LENGTH);
+    int success = send_message(client_fd, err_buffer, MAX_RESPONSE_LENGTH);
     ASSERT_MESSAGE(success != -1, "Writing error message to client", return);
     // Stampa il messaggio anche sullo standard error
     fprintf(stderr, "[objectstore] Client %d: %s\n", client_fd, strerror(errno));
@@ -72,8 +72,8 @@ void print_report () {
  */
 void send_ok (int client_fd) {
     // Crea la stringa con scritto ok
-    char ok_string[MAX_HEADER_LENGTH] = "OK \n";
-    int success = send_message(client_fd, ok_string, MAX_HEADER_LENGTH);
+    char ok_string[MAX_RESPONSE_LENGTH] = "OK \n";
+    int success = send_message(client_fd, ok_string, MAX_RESPONSE_LENGTH);
     ASSERT(success != -1, send_error(client_fd));
 }
 
@@ -141,14 +141,14 @@ int handle_storing (int client_fd, char* name, size_t length) {
  */
 int handle_retrieving (int client_fd, char* name) {
     // Alloca l'header del messaggio
-    char header[MAX_HEADER_LENGTH];
+    char response[MAX_DATA_LENGTH];
     // Recupera il blocco
     size_t size;
     void* block = retrieve_block(client_fd, name, &size);
     ASSERT_RETURN(block != NULL, -1);
     // Costruisce e invia l'header
-    sprintf(header, "DATA %zu \n", size);
-    int success = send_message(client_fd, header, sizeof(char) * MAX_HEADER_LENGTH);
+    sprintf(response, "DATA %zu \n", size);
+    int success = send_message(client_fd, response, sizeof(char) * MAX_DATA_LENGTH);
     ASSERT_RETURN(success != -1, -1);
     // Invia il blocco
     success = send_message(client_fd, block, size);

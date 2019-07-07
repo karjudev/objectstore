@@ -3,14 +3,13 @@ LIB = ./lib
 
 # Compilatore e relative opzioni
 CC = gcc -std=c99
-CFLAGS = -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB) \
-#-fsanitize=undefined -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer
+CFLAGS = -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB)
 
 # Creatore di librerie e relative opzioni
 AR = ar
 ARFLAGS = rvs
 
-.PHONY: all clean test test-client test-server
+.PHONY: all clean test
 
 all: objectstore client
 
@@ -49,7 +48,7 @@ $(LIB)/libworkers.a: $(LIB)/workers/workers.o
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Target che avvia il server e lo script di test
+# Target che avvia il server e gli script di test
 test: all
 	./objectstore &
 	./test.sh
