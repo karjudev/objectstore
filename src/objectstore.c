@@ -22,6 +22,7 @@
 #include <assertmacros.h>
 #include <shared.h>
 
+#include <socket/safeio.h>
 #include <socket/socket.h>
 #include <workers/workers.h>
 #include <pthread_list/pthread_list.h>
@@ -118,13 +119,10 @@ int handle_deletion (int client_fd, char* name) {
  * @param client_fd File descriptor del client
  * @param name Nome dell'oggetto da memorizzare
  * @param length Dimensione dell'oggetto
+ * @param data Puntatore ai dati da memorizzare
  * @return int Se la memorizzazione è avvenuta con successo manda OK al client e restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
-int handle_storing (int client_fd, char* name, size_t length) {
-    // Legge i dati
-    void* data = receive_message(client_fd, length);
-    ASSERT_RETURN(data != NULL, -1);
-    // Scrive i dati sul disco
+int handle_storing (int client_fd, char* name, size_t length, void* data) {
     int success = store_block(client_fd, name, data, length);
     ASSERT_RETURN(success != -1, -1);
     free(data);
@@ -155,7 +153,7 @@ int handle_retrieving (int client_fd, char* name) {
         printf("[objectstore] Client %d: %s\n", client_fd, strerror(errno));
     }
     // Altrimenti costruisce l'header della risposta
-    else sprintf(response, "DATA %zu \n ", size);
+    else sprintf(response, "DATA %zu \n", size);
     // Invia l'header
     success = send_message(client_fd, response, sizeof(char) * MAX_DATA_LENGTH);
     ASSERT_RETURN(success != -1, -1);
@@ -210,42 +208,83 @@ void* signal_handler (void* ptr) {
 }
 
 /**
- * @brief Gestisce una richiesta riconoscendo l'header come una concatenazione <verb> <name> [<length>]
+ * @brief Interpreta i campi di una richiesta, leggendo anche i dati addizionali ad essa allegati
  * 
  * @param client_fd File descriptor del client
- * @param header Header inviato dal client
- * @return int 0 se la richiesta è stata gestita con successo, 1 se la richiesta è di terminazione. Se c'è un errore restituisce -1 e setta errno.
+ * @param message Messaggio arrivato dal client
+ * @param size Dimensione del messaggio letto
+ * @param verb_ptr Puntatore al verbo della richiesta
+ * @param name_ptr Puntatore al nome della richiesta
+ * @param lenght_ptr Puntatore alla lunghezza dei dati allegati
+ * @param data_ptr Puntatore ai dati allegati
+ * @return int Se il parsing è avvenuto con successo restituisce 0. Se c'è un errore restituisce -1 e setta errno.
  */
-int parse_request (int client_fd, char* header) {
-    // Verbo nell'header
-    char* verb = (char*) calloc(9, sizeof(char));
-    // Nome nell'header
-    char* name = (char*) calloc(255, sizeof(char));
-    // Dimensione nell'header
+int parse_request (int client_fd, char* message, size_t size, char** verb_ptr, char** name_ptr, size_t* lenght_ptr, void** data_ptr) {
+    // Lunghezza dell'header
+    size_t header_length = strlen(message) + 1;
+    // Puntatore d'appoggio
+    char* save_ptr;
+    // Campi dell'header
+    char* verb = strtok_r(message, " ", &save_ptr);
+    char* name = strtok_r(NULL, " ", &save_ptr);
+    char* length_str = strtok_r(NULL, " ", &save_ptr);
     size_t length = 0;
-    // Analizza la stringa di header estraendo le informazioni
-    sscanf(header, "%s %s %zu \n", verb, name, &length);
-    // Risultato della computazione
+    if (length_str) length = strtol(length_str, NULL, 10);
+    // Fa puntare i puntatori ai valori da restituire
+    *verb_ptr = verb;
+    *name_ptr = name;
+    *lenght_ptr = length;
+    // Se la lunghezza definita è 0 non deve leggere il resto del campo dati
+    if (length <= 0) return 0;
+    // Buffer per i dati (allocato come char per poter fare addizioni)
+    char* data = malloc(length);
+    ASSERT_ERRNO_RETURN(data != NULL, ENOMEM, -1);
+    // Numero di bytes dati già letti nel messaggio
+    size_t data_bytes_read = size - (sizeof(char) * header_length);
+    // Numero di bytes ancora da leggere
+    size_t data_bytes_remaining = length - data_bytes_read;
+    // Copia i bytes già letti nel buffer
+    memcpy(data, message + header_length, data_bytes_read);
+    // Legge i successivi bytes
+    size_t data_bytes_remained = readn(client_fd, data + data_bytes_read, data_bytes_remaining);
+    ASSERT(data_bytes_remained == data_bytes_remaining, free(data); return -1);
+    // Fa puntare il puntatore ai dati
+    *data_ptr = data;
+    // Restituisce il successo
+    return 0;
+}
+
+/**
+ * @brief Interpreta i campi della richiesta e in
+ * 
+ * @param client_fd File descriptor del client
+ * @param verb Verbo dell'operazione da svolgere
+ * @param name Nome dell'oggetto da gestire
+ * @param length Lunghezza dell'oggetto
+ * @param data Blocco di dati del messaggio
+ * @return int Se l'operazione è stata gestita con successo restituisce 0.
+ * Se l'operazione è di terminazione restituisce 1.
+ * Se c'è un errore restituisce -1 e setta errno.
+ */
+int route_request (int client_fd, char* verb, char* name, size_t length, void* data) {
     int success;
-    // Prima tenta di riconoscere i verbi che non necessitano di ulteriori letture o scritture
+    // Prova tutti i possibili verbi ammessi
     if (EQUALS(verb, "REGISTER"))
         success = handle_registration(client_fd, name);
     else if (EQUALS(verb, "DELETE"))
         success = handle_deletion(client_fd, name);
-    // Dopodiché passa il controllo ai metodi che richiedono di leggere o scrivere ancora dal client
     else if (EQUALS(verb, "STORE"))
-        success = handle_storing(client_fd, name, length);
+        success = handle_storing(client_fd, name, length, data);
     else if (EQUALS(verb, "RETRIEVE"))
         success = handle_retrieving(client_fd, name);
     else if (EQUALS(verb, "LEAVE"))
         success = handle_leaving(client_fd);
     // Se non ha trovato un verbo riconosciuto invia un errore
     else success = -1;
-    // Libera la memoria occupata dalle stringhe
-    free(verb); free(name);
-    // Restituisce il flag restituito dai controller
+    // Restituisce il flag restituito dai vari handler
     return success;
 }
+
 
 /**
  * @brief Legge un header dal client ed avvia la procedura associata. Se una delle procedure restituisce un errore lo invia al client.
@@ -256,25 +295,38 @@ int parse_request (int client_fd, char* header) {
 void* connection_handler (void* ptr) {
     // File descriptor del client
     int* client_ptr = (int*) ptr;
-    int client_fd = *(client_ptr);
+    int client_fd = *client_ptr;
+    // Verbo dell'operazione da svolgere
+    char* verb = NULL;
+    // Nome dell'oggetto associato al verbo
+    char* name = NULL;
+    // Lunghezza del messaggio
+    size_t length = -1;
+    // Dati allegati al messaggio
+    void* data = NULL;
+    // Stampa un messaggio di log
+    printf("[objectstore] Client %d connected\n", client_fd);
     // Loop di gestione delle comunicazioni
     while (!terminated) {
-        // Header del messaggio
-        char* header = receive_message(client_fd, sizeof(char) * MAX_HEADER_LENGTH);
+        // Riceve il messaggio e la relativa dimensione
+        size_t size = 0;
+        char* message = receive_uninterrupted(client_fd, sizeof(char) * MAX_HEADER_LENGTH, &size);
         // Se non ci riesce la pipe è stata interrotta, quindi esce
-        if (!header) break;
-        // Altrimenti stampa un messaggio di log
-        printf("[objectstore] Client %d: %s", client_fd, header);
-        // Avvia la gestione della richiesta
-        int result = parse_request(client_fd, header);
+        ASSERT((message != NULL) && (size > 0), break);
+        // Interpreta il messaggio
+        int result = parse_request(client_fd, message, size, &verb, &name, &length, &data);
+        ASSERT(result != -1, free(message); break);
+        // Stampa un messaggio di log
+        printf("[objectstore]: Client %d asked for %s operation\n", client_fd, verb);
+        // Indirizza il messaggio alla funzione competente
+        result = route_request(client_fd, verb, name, length, data);
         // Libera la memoria occupata dall'header
-        free(header);
+        free(message);
         // Se la richiesta non è andata a buon stampa un errore
         ASSERT(result != -1, send_error(client_fd));
         // Se parse_request restituisce 1 il messaggio è di terminazione
         if (result == 1) break;
     }
-    // Libera la memoria occupata dal file descriptor
     free(client_ptr);
     // Chiude la connessione
     ASSERT_MESSAGE_RETURN(close_socket(client_fd) == 0, "[objectstore] Closing socket", NULL);
@@ -334,7 +386,6 @@ int main(int argc, char const *argv[]) {
     while (thread_list != NULL) {
         pthread_t thread_id = remove_pthread_list_head(&thread_list);
         ASSERT_MESSAGE(pthread_join(thread_id, NULL) == 0, "[objectstore] Joining thread", exit(1));
-        printf("[objectstore] Thread %ld terminated\n", thread_id);
     }
     // Libera la memoria occupata dalle funzioni worker
     ASSERT_MESSAGE(stop_worker_functions() != -1, "[objectstore] Stopping worker function", exit(1));

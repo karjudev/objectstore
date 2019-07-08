@@ -3,7 +3,7 @@ LIB = ./lib
 
 # Compilatore e relative opzioni
 CC = gcc -std=c99
-CFLAGS = -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB)
+CFLAGS = -g -Wall -Werror -pedantic -pedantic-errors -pthread -O3 -L $(LIB) -I $(LIB)
 
 # Creatore di librerie e relative opzioni
 AR = ar
@@ -20,9 +20,6 @@ objectstore: objectstore.c $(LIB)/libsocket.a $(LIB)/libhashtable.a $(LIB)/libwo
 # Eseguibile del client
 client: client.c $(LIB)/libsocket.a $(LIB)/libosclient.a
 	$(CC) $(CFLAGS) $< -o $@ -losclient -lsocket
-
-testhash: testhash.c $(LIB)/libhashtable.a
-	$(CC) $(CFLAGS) $< -o $@ -lhashtable
 
 # Libreria per la gestione di una tabella hash
 $(LIB)/libhashtable.a: $(LIB)/hashtable/hashtable.o $(LIB)/hashtable/pair_list.o
@@ -47,6 +44,14 @@ $(LIB)/libworkers.a: $(LIB)/workers/workers.o
 # Pattern generico di compilazione di un file oggetto
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $< -o $@
+
+test-server: objectstore
+	if [ -S ./objstore.sock ]; then rm ./objstore.sock; fi
+	valgrind --leak-check=full --show-leak-kinds=all ./$<
+
+test-client: client
+	valgrind --leak-check=full --show-leak-kinds=all ./$< ugo 1
+	valgrind --leak-check=full --show-leak-kinds=all ./$< ugo 2
 
 # Target che avvia il server e gli script di test
 test: all

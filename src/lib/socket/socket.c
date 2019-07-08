@@ -68,6 +68,37 @@ void* receive_message (int file_descriptor, size_t size) {
 }
 
 /**
+ * @brief Riceve un messaggio di al più max bytes, controllando solo che non ci siano interruzioni
+ * 
+ * @param file_descriptor File descriptor da cui leggere
+ * @param max Massimo numero di bytes da leggere
+ * @param size_ptr Puntatore alla dimensione effettiva dei bytes letti
+ * @return void* Puntatore al messaggio se la ricezione è avvenuta con successo. Se c'è un errore restituisce NULL e setta errno.
+ */
+void* receive_uninterrupted (int file_descriptor, size_t max, size_t* size_ptr) {
+	// Buffer che conterrà il messaggio
+	void* buffer = malloc(max);
+	ASSERT_ERRNO_RETURN(buffer != NULL, ENOMEM, NULL);
+	// Numero di bytes letti
+    size_t bytes_read = 0;
+	// Tenta di leggere il messaggio ripetendo è interrotto
+    while (bytes_read <= 0) {
+        if (bytes_read < 0) {
+            if (errno == EINTR) bytes_read = 0;
+            else return NULL;
+        }
+        bytes_read = read(file_descriptor, buffer, max);
+    }
+	// Rialloca il buffer perché contenga solo i dati effettivamente arrivati
+    buffer = realloc(buffer, bytes_read);
+	ASSERT_ERRNO_RETURN(buffer != NULL, ENOMEM, NULL);
+	// Setta il puntatore perché contenga il numero di bytes
+    *size_ptr = bytes_read;
+	// Restituisce il buffer
+    return buffer;
+}
+
+/**
  * @brief Crea una struttura dati per ospitare l'indirizzo del socket.
  *
  * @param socket_name Nome del file su cui creare il socket.

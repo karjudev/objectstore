@@ -21,10 +21,6 @@
 
 #include <shared.h>
 
-/**
- * @brief Tipo di dato grande 1 byte
- */
-typedef unsigned char byte;
 
 /**
  * @brief Crea un array di bytes grande size
@@ -32,10 +28,10 @@ typedef unsigned char byte;
  * @param size Numero di bytes
  * @return byte* Array di bytes di dimensione size. Se c'è un errore restituisce NULL e setta errno.
  */
-static byte* create_test_array (size_t size) {
-    byte* array = (byte*) malloc(size);
+static int* create_test_array (size_t size) {
+    int* array = (int*) malloc(sizeof(int) * size);
     ASSERT_ERRNO_RETURN(array != NULL, ENOMEM, NULL);
-    for (int i = 0; i < 100000; i++) array[i] = (byte) i;
+    for (int i = 0; i < 100000; i++) array[i] = i;
     return array;
 }
 
@@ -47,10 +43,12 @@ static byte* create_test_array (size_t size) {
  * @param size Lunghezza dell'array da confrontare
  * @return int Se i due array hanno gli stessi elementi restituisce 1, altrimenti 0.
  */
-static int data_corresponding (byte* array_a, byte* array_b, size_t size) {
+static int data_corresponding (int* array_a, int* array_b, size_t size) {
     for (int i = 0; i < size; i++)
-        if (array_a[i] != array_b[i])
+        if (array_a[i] != array_b[i]) {
+            printf("i %d a %d b %d\n", i, array_a[i], array_b[i]);
             return 0;
+        }
     return 1;
 }
 
@@ -63,7 +61,7 @@ static int store_data () {
     // Variabile che contiene il nome del blocco
     char name[2] = "A";
     // Buffer da 100KB
-    byte* array = create_test_array(100000);
+    int* array = create_test_array(100000);
     ASSERT_RETURN(array != NULL, 1);
     // Invia 20 messaggi in ordine crescente di dimensione
     int size = 100;
@@ -88,10 +86,12 @@ static int store_data () {
  * @param size Dimensione dei dati da confrontare
  * @return int Se i due array sono uguali restituisce 0. Se c'è un errore restituisce -1.
  */
-static int compare_data (char* name, byte* array, int size) {
+static int compare_data (char* name, int* array, int size) {
     // Richiede i dati al server
-    byte* data = os_retrieve(name);
-    ASSERT(data != NULL, free(data); return 1);
+    int* data = os_retrieve(name);
+    ASSERT(data != NULL, free(data); return -1);
+    for (int i = 0; i < size; i++)
+        printf("%d ", data[i]);
     // Verifica che i dati siano uguali
     int equals = data_corresponding(data, array, size);
     ASSERT(equals == 1, free(data); return -1);
@@ -108,7 +108,7 @@ static int compare_data (char* name, byte* array, int size) {
  */
 static int retrieve_data () {
     // Byte array di prova
-    byte* array = create_test_array(100000);
+    int* array = create_test_array(100000);
     // Step con cui aumenta la dimensione dei dati
     int step = (100000 - 100) / 20;
     // Nome della risorsa

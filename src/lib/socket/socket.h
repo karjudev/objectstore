@@ -30,6 +30,16 @@ int send_message (int file_descriptor, void* message, size_t size);
 void* receive_message (int file_descriptor, size_t size);
 
 /**
+ * @brief Riceve un messaggio di al più max bytes, controllando solo che non ci siano interruzioni
+ * 
+ * @param file_descriptor File descriptor da cui leggere
+ * @param max Massimo numero di bytes da leggere
+ * @param size_ptr Puntatore alla dimensione effettiva dei bytes letti
+ * @return void* Puntatore al messaggio se la ricezione è avvenuta con successo. Se c'è un errore restituisce NULL e setta errno.
+ */
+void* receive_uninterrupted (int file_descriptor, size_t max, size_t* size);
+
+/**
  * @brief Crea un file descriptor collegato ad un server socket AF_UNIX.
  *
  * @param socket_name Nome del file che rappresenta il socket

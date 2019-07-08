@@ -14,6 +14,7 @@
 
 #include <sys/select.h>
 
+#include <socket/safeio.h>
 #include <socket/socket.h>
 
 #include <os_client/os_client.h>
@@ -65,10 +66,52 @@ static int send_header (char* format, char* name, size_t length) {
     // Distingue il tipo di parametri passati e costruisce la stringa
     if (length != 0) sprintf(header, format, name, length);
     else sprintf(header, format, name);
+    // Lunghezza dell'header
+    size_t size = sizeof(char) * (strlen(header) + 1);
     // Invia l'header
-    int success = send_message(server_fd, header, sizeof(char) * MAX_HEADER_LENGTH);
+    int success = send_message(server_fd, header, size);
     // Restituisce il successo dell'operazione
     return success;
+}
+
+/**
+ * @brief Legge dal server un messaggio costituito da header + dati
+ * 
+ * @param length_ptr Puntatore alla dimensione del blocco
+ * @return void* Dati mandati dal server. Se c'è un errore restituisce NULL e setta errno.
+ */
+static void* receive_data (size_t* length_ptr) {
+    // Legge un messaggio dal server
+    size_t size = 0;
+    char* message = receive_uninterrupted(server_fd, MAX_DATA_LENGTH, &size);
+    ASSERT_RETURN((message != NULL) && (size > 0), NULL);
+    // Controlla che il messaggio ricevuto non sia un errore
+    int is_error = parse_error(message);
+    ASSERT(is_error == 0, free(message); return NULL);
+    // Lunghezza dell'header
+    size_t header_length = strlen(message) + 1;
+    // Lunghezza del messaggio
+    size_t length;
+    sscanf(message, "DATA %zu \n", &length);
+    ASSERT_ERRNO(length > 0, EINVAL, free(message); return NULL);
+    // Numero di bytes dati già letti
+    size_t data_read = size - (sizeof(char) * header_length);
+    // Numero di bytes ancora da leggere
+    size_t data_remaining = length - data_read;
+    // Buffer che contiene il messaggio
+    char* data = malloc(length);
+    ASSERT_ERRNO(data != NULL, ENOMEM, free(message); return NULL);
+    // Copia i dati già letti nel buffer
+    memcpy(data, message + header_length, data_read);
+    // Libera il buffer del messaggio
+    free(message);
+    // Legge i successivi bytes
+    size_t data_remained = readn(server_fd, data + data_read, data_remaining);
+    ASSERT_RETURN(data_remained == data_remaining, NULL);
+    // Scrive la dimensione dei dati
+    *length_ptr = length;
+    // Restituisce i dati
+    return data;
 }
 
 /**
@@ -106,7 +149,7 @@ int os_store (char* name, void* block, size_t len) {
     ASSERT_ERRNO_RETURN((name != NULL) && (block != NULL) && (len > 0), EINVAL, 0);
     ASSERT_ERRNO_RETURN(server_fd > 0, ENOTCONN, -1);
     // Invia l'header
-    int success = send_header("STORE %s %ld \n ", name, len);
+    int success = send_header("STORE %s %ld \n", name, len);
     // Verifica che l'invio sia andato a buon fine
     ASSERT_RETURN(success != -1, 0);
     // Invia i dati
@@ -133,21 +176,10 @@ void* os_retrieve (char* name) {
     // Invia l'header
     int success = send_header("RETRIEVE %s \n", name, 0);
     ASSERT_RETURN(success != -1, NULL);
-    // Riceve il messaggio con l'header della risposta
-    char* res_header = receive_message(server_fd, sizeof(char) * MAX_DATA_LENGTH);
-    ASSERT_RETURN(res_header != NULL, NULL);
-    // Controlla che non sia stato restituito un errore
-    int is_error = parse_error(res_header);
-    ASSERT(is_error == 0, free(res_header); return NULL);
-    // Legge la dimensione dei dati in arrivo
-    size_t size = 0;
-    sscanf(res_header, "DATA %zu \n", &size);
-    free(res_header);
-    // Se l'header non è arrivato con successo esce
-    ASSERT_RETURN(size > 0, NULL);
-    // Riceve effettivamente i dati
-    void* data = receive_message(server_fd, size);
-    ASSERT_RETURN(data != NULL, 0);
+    // Riceve i dati dal server
+    size_t length = 0;
+    void* data = receive_data(&length);
+    ASSERT_RETURN(length > 0, NULL);
     // Restituisce i dati
     return data;
 }
